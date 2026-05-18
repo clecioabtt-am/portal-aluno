@@ -345,7 +345,27 @@ async function initAdmin(){
       const {data:diario,error:de}=await sb.from('diarios_ceeb').insert({...meta,nome_arquivo:parsed.fileName,total_alunos:parsed.alunos.length}).select().single(); if(de) throw de;
       for(const a of parsed.alunos){
         const cpf=cleanCPF(a.cpf); let {data:aluno,error:ae}=await sb.from('alunos_ceeb').upsert({nome:a.nome,nome_normalizado:norm(a.nome),cpf},{onConflict:'cpf'}).select().single(); if(ae) throw ae;
-        const nota={...a, cpf:undefined, diario_id:diario.id, aluno_id:aluno.id, ...meta};
+        const nota = {
+          diario_id: diario.id,
+          aluno_id: aluno.id,
+          curso: meta.curso || null,
+          turma: meta.turma || null,
+          professor: meta.professor || null,
+          disciplina: meta.disciplina || null,
+          horario: meta.horario || null,
+          carga_horaria: meta.carga_horaria || null,
+          periodo: meta.periodo || null,
+          nota_1: a.nota_1 ?? null,
+          nota_2: a.nota_2 ?? null,
+          nota_3: a.nota_3 ?? null,
+          nota_4: a.nota_4 ?? null,
+          aproveitamento: a.aproveitamento ?? null,
+          faltas: a.faltas ?? 0,
+          recuperacao: a.recuperacao ?? null,
+          media_pos_recuperacao: a.media_pos_recuperacao ?? null,
+          situacao: a.situacao || null,
+          observacao: a.observacao || null
+        };
         const {error:ne}=await sb.from('notas_ceeb').upsert(nota,{onConflict:'aluno_id,disciplina,turma,periodo'}); if(ne) throw ne;
       }
       setStatus($('#saveStatus'),'Notas salvas com sucesso! Cada aluno já pode consultar pelo nome e CPF.'); loadImports();
