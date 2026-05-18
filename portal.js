@@ -91,7 +91,9 @@ async function parseFile(file){
 
 function renderPreview(alunos){
   const tbody = $('#previewBody'); if(!tbody) return;
-  tbody.innerHTML = alunos.map((a,i)=>`<tr><td>${i+1}</td><td><b>${a.nome}</b></td><td><input data-i="${i}" data-k="cpf" value="${a.cpf||''}" placeholder="CPF obrigatório"></td><td>${a.nota_1??''}</td><td>${a.nota_2??''}</td><td>${a.nota_3??''}</td><td>${a.aproveitamento??''}</td><td>${a.faltas??0}</td><td>${a.situacao||''}</td></tr>`).join('');
+  tbody.innerHTML = alunos.length ? alunos.map((a,i)=>`<tr><td class="checkCol"><input class="studentSelect" type="checkbox" data-i="${i}" title="Selecionar aluno para excluir"></td><td>${i+1}</td><td><b>${a.nome}</b></td><td><input data-i="${i}" data-k="cpf" value="${a.cpf||''}" placeholder="CPF obrigatório"></td><td>${a.nota_1??''}</td><td>${a.nota_2??''}</td><td>${a.nota_3??''}</td><td>${a.aproveitamento??''}</td><td>${a.faltas??0}</td><td>${a.situacao||''}</td></tr>`).join('') : '<tr><td colspan="10">Nenhum aluno na prévia.</td></tr>';
+  const selectAll = $('#selectAllPreview');
+  if(selectAll) selectAll.checked = false;
 }
 
 async function initAdmin(){
@@ -151,7 +153,22 @@ async function initAdmin(){
     try{ const file=e.target.files[0]; if(!file) return; setStatus($('#uploadStatus'),'Lendo arquivo e organizando as notas...'); parsed = await parseFile(file); parsed.fileName=file.name; Object.entries(parsed.meta).forEach(([k,v])=>{ const el=$(`[name="${k}"]`); if(el && v) el.value=v; }); renderPreview(parsed.alunos); setStatus($('#uploadStatus'),`Arquivo lido com sucesso. ${parsed.alunos.length} alunos encontrados. Preencha os CPFs que faltarem e clique em Salvar.`); }
     catch(err){ setStatus($('#uploadStatus'), err.message, true); }
   });
-  $('#previewBody')?.addEventListener('input', e=>{ const i=e.target.dataset.i, k=e.target.dataset.k; if(parsed && i!==undefined) parsed.alunos[i][k]=e.target.value; });
+  $('#previewBody')?.addEventListener('input', e=>{ const i=e.target.dataset.i, k=e.target.dataset.k; if(parsed && i!==undefined && k) parsed.alunos[i][k]=e.target.value; });
+
+  $('#deleteSelectedStudents')?.addEventListener('click', ()=>{
+    if(!parsed || !parsed.alunos || !parsed.alunos.length) return setStatus($('#uploadStatus'), 'Nenhum aluno carregado para excluir.', true);
+    const selected = $$('.studentSelect:checked').map(el=>Number(el.dataset.i)).filter(i=>!Number.isNaN(i));
+    if(!selected.length) return setStatus($('#uploadStatus'), 'Selecione pelo menos um aluno para excluir da lista.', true);
+    const selectedSet = new Set(selected);
+    const removidos = parsed.alunos.filter((_,i)=>selectedSet.has(i)).map(a=>a.nome);
+    parsed.alunos = parsed.alunos.filter((_,i)=>!selectedSet.has(i));
+    renderPreview(parsed.alunos);
+    setStatus($('#uploadStatus'), `${removidos.length} aluno(s) removido(s) da prévia: ${removidos.slice(0,3).join(', ')}${removidos.length>3?'...':''}`);
+  });
+  $('#selectAllPreview')?.addEventListener('change', e=>{
+    $$('.studentSelect').forEach(ch=>ch.checked = e.target.checked);
+  });
+
   $('#saveImport')?.addEventListener('click', async()=>{
     try{
       if(!parsed || !parsed.alunos.length) throw new Error('Envie um arquivo antes de salvar.');
