@@ -58,37 +58,130 @@ function mapRows(rawRows){
   return out;
 }
 
+
+function rowsFromMatrix(matrix){
+  const cleanRow = (r) => (r || []).map(c => String(c ?? '').replace(/\s+/g,' ').trim());
+  const rows = matrix.map(cleanRow).filter(r => r.some(Boolean));
+  let headerIndex = rows.findIndex(r => r.some(c => ['nome','nomes','aluno','alunos'].includes(norm(c))));
+  if(headerIndex < 0) headerIndex = rows.findIndex(r => r.some(c => /nomes?|alunos?/i.test(String(c))));
+  if(headerIndex < 0) return [];
+  const header = rows[headerIndex];
+  const idx = (tests) => header.findIndex(h => tests.some(t => t.test(norm(h)) || t.test(String(h).toLowerCase())));
+  const iNome = idx([/^nome$/, /^nomes$/, /^aluno/, /^alunos/]);
+  const iCpf = idx([/^cpf/, /cpf\/cnpj/]);
+  const findGrade = (n) => header.findIndex(h => {
+    const x = norm(h).replace(/\s+/g,'');
+    return x === String(n) || x === `${n}°` || x === `${n}º` || x === `${n}a` || x === `${n}ª` || x === `nota${n}` || x === `n${n}`;
+  });
+  const i1 = findGrade(1), i2 = findGrade(2), i3 = findGrade(3), i4 = findGrade(4);
+  const iMedia = idx([/aproveitamento/, /^media$/, /^m[eé]dia$/]);
+  const iFaltas = idx([/faltas?/]);
+  const iRec = idx([/recupera/]);
+  const iSit = idx([/^sit$/, /situacao/, /situa/]);
+  const out=[];
+  for(const row of rows.slice(headerIndex+1)){
+    const nome = row[iNome] || '';
+    if(!nome || nome.length < 5 || /total|m[eé]dia|nome|di[aá]rio|professor|disciplina/i.test(nome)) continue;
+    const nums = row.map(toNum).filter(v => v !== null);
+    out.push({
+      nome: nome.trim(),
+      cpf: cleanCPF(iCpf >= 0 ? row[iCpf] : ''),
+      nota_1: i1 >= 0 ? toNum(row[i1]) : (nums[0] ?? null),
+      nota_2: i2 >= 0 ? toNum(row[i2]) : (nums[1] ?? null),
+      nota_3: i3 >= 0 ? toNum(row[i3]) : (nums[2] ?? null),
+      nota_4: i4 >= 0 ? toNum(row[i4]) : (nums[3] ?? null),
+      aproveitamento: iMedia >= 0 ? toNum(row[iMedia]) : (nums[4] ?? nums[3] ?? null),
+      faltas: iFaltas >= 0 ? (toNum(row[iFaltas]) || 0) : 0,
+      recuperacao: iRec >= 0 ? toNum(row[iRec]) : null,
+      media_pos_recuperacao: null,
+      situacao: iSit >= 0 ? row[iSit] : '',
+      observacao: ''
+    });
+  }
+  return out;
+}
+
+function alunosFromPlainText(text){
+  const lines = String(text || '')
+    .replace(/\u0000/g,' ')
+    .split(/\r?\n|\u000b|\f/)
+    .map(l => l.replace(/\s+/g,' ').trim())
+    .filter(Boolean);
+  const out=[];
+  for(const line of lines){
+    if(!/^\d{1,3}\s+/.test(line)) continue;
+    const cpfMatch = line.match(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/);
+    const numericMatches = [...line.matchAll(/(?:^|\s)(\d{1,3}(?:[,.]\d{1,2})?)(?=\s|$)/g)].map(m=>m[1]);
+    const withoutStart = line.replace(/^\d{1,3}\s+/, '');
+    const firstGrade = withoutStart.search(/\s\d{1,2}[,.]\d{1,2}(?=\s|$)|\s\d{1,2}(?=\s+\d)/);
+    if(firstGrade < 0) continue;
+    let nome = withoutStart.slice(0, firstGrade).trim();
+    nome = nome.replace(/\d{3}\.?\d{3}\.?\d{3}-?\d{2}/g,'').trim();
+    if(nome.length < 5 || /nome|professor|disciplina|horario|diario/i.test(nome)) continue;
+    const gradePart = withoutStart.slice(firstGrade).trim();
+    const vals = [...gradePart.matchAll(/\d{1,3}(?:[,.]\d{1,2})?/g)].map(m=>toNum(m[0])).filter(v=>v!==null);
+    out.push({
+      nome,
+      cpf: cleanCPF(cpfMatch ? cpfMatch[0] : ''),
+      nota_1: vals[0] ?? null,
+      nota_2: vals[1] ?? null,
+      nota_3: vals[2] ?? null,
+      nota_4: vals[3] ?? null,
+      aproveitamento: vals[4] ?? vals[3] ?? null,
+      faltas: 0,
+      recuperacao: null,
+      media_pos_recuperacao: null,
+      situacao: '',
+      observacao: ''
+    });
+  }
+  return out;
+}
+
 async function parseFile(file){
   const ext = file.name.split('.').pop().toLowerCase();
   if(['xlsx','xls','csv'].includes(ext)){
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, {type:'array'});
-    const sheet = wb.Sheets[wb.SheetNames[0]];
-    const arr = XLSX.utils.sheet_to_json(sheet, {header:1, defval:''});
-    const text = arr.map(r=>r.join(' ')).join('\n');
-    let headerIndex = arr.findIndex(r => r.some(c => norm(c)==='nome' || norm(c)==='nomes'));
-    if(headerIndex < 0) headerIndex = 0;
-    const headers = arr[headerIndex].map((h,i)=> h || `col_${i}`);
-    const rawRows = arr.slice(headerIndex+1).map(row => Object.fromEntries(headers.map((h,i)=>[h,row[i]])));
-    return {meta:extractMeta(text), alunos:mapRows(rawRows)};
+    let allText = '';
+    let alunos = [];
+    for(const sheetName of wb.SheetNames){
+      const sheet = wb.Sheets[sheetName];
+      const arr = XLSX.utils.sheet_to_json(sheet, {header:1, defval:'', raw:false});
+      allText += '\n' + arr.map(r=>r.join(' ')).join('\n');
+      const found = rowsFromMatrix(arr);
+      if(found.length > alunos.length) alunos = found;
+    }
+    if(!alunos.length) alunos = alunosFromPlainText(allText);
+    return {meta:extractMeta(allText), alunos};
   }
   if(ext === 'docx'){
     const buf = await file.arrayBuffer();
     const html = await mammoth.convertToHtml({arrayBuffer:buf});
     const container = document.createElement('div'); container.innerHTML = html.value;
     const text = container.textContent || '';
-    const table = container.querySelector('table');
-    if(!table) return {meta:extractMeta(text), alunos:[]};
-    const matrix = [...table.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.textContent.trim()));
-    let headerIndex = matrix.findIndex(r => r.some(c => norm(c)==='nome' || norm(c)==='nomes'));
-    if(headerIndex < 0) headerIndex = 0;
-    const headers = matrix[headerIndex].map((h,i)=> h || `col_${i}`);
-    const rawRows = matrix.slice(headerIndex+1).map(row => Object.fromEntries(headers.map((h,i)=>[h,row[i]])));
-    return {meta:extractMeta(text), alunos:mapRows(rawRows)};
+    let alunos = [];
+    const tables = [...container.querySelectorAll('table')];
+    for(const table of tables){
+      const matrix = [...table.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.textContent.trim()));
+      const found = rowsFromMatrix(matrix);
+      if(found.length > alunos.length) alunos = found;
+    }
+    if(!alunos.length) alunos = alunosFromPlainText(text);
+    return {meta:extractMeta(text), alunos};
   }
-  throw new Error('Formato não suportado. Envie .xlsx, .xls, .csv ou .docx.');
+  if(ext === 'doc' || ext === 'txt'){
+    const buf = await file.arrayBuffer();
+    const decoders = ['utf-8','windows-1252','utf-16le'];
+    let text = '';
+    for(const enc of decoders){
+      try { const t = new TextDecoder(enc).decode(buf); if(t.length > text.length) text = t; } catch(e){}
+    }
+    const alunos = alunosFromPlainText(text);
+    return {meta:extractMeta(text), alunos};
+  }
+  throw new Error('Formato não suportado. Envie .xlsx, .xls, .csv, .docx ou .doc. Se o Word for muito antigo ou for imagem escaneada, salve como Excel para leitura perfeita.');
 }
-
 function renderPreview(alunos){
   const tbody = $('#previewBody'); if(!tbody) return;
   tbody.innerHTML = alunos.length ? alunos.map((a,i)=>`<tr><td class="checkCol"><input class="studentSelect" type="checkbox" data-i="${i}" title="Selecionar aluno para excluir"></td><td>${i+1}</td><td><b>${a.nome}</b></td><td><input data-i="${i}" data-k="cpf" value="${a.cpf||''}" placeholder="CPF obrigatório"></td><td>${a.nota_1??''}</td><td>${a.nota_2??''}</td><td>${a.nota_3??''}</td><td>${a.aproveitamento??''}</td><td>${a.faltas??0}</td><td>${a.situacao||''}</td></tr>`).join('') : '<tr><td colspan="10">Nenhum aluno na prévia.</td></tr>';
