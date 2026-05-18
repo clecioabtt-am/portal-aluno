@@ -138,6 +138,90 @@ function alunosFromPlainText(text){
   return out;
 }
 
+
+function decodeXmlEntities(text=''){
+  return String(text)
+    .replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+    .replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+}
+
+function extractDocxTextFromXml(xml=''){
+  const paragraphs = [];
+  const paraMatches = String(xml).match(/<w:p[\s\S]*?<\/w:p>/g) || [];
+  for(const p of paraMatches){
+    const texts = [...p.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g)].map(m=>decodeXmlEntities(m[1]));
+    if(texts.length) paragraphs.push(texts.join('').replace(/\s+/g,' ').trim());
+  }
+  return paragraphs.filter(Boolean).join('\n');
+}
+
+function extractDocxTablesFromXml(xml=''){
+  const tables = [];
+  const tableMatches = String(xml).match(/<w:tbl[\s\S]*?<\/w:tbl>/g) || [];
+  for(const tbl of tableMatches){
+    const matrix = [];
+    const rowMatches = tbl.match(/<w:tr[\s\S]*?<\/w:tr>/g) || [];
+    for(const tr of rowMatches){
+      const cells = [];
+      const cellMatches = tr.match(/<w:tc[\s\S]*?<\/w:tc>/g) || [];
+      for(const tc of cellMatches){
+        const texts = [...tc.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g)].map(m=>decodeXmlEntities(m[1]));
+        cells.push(texts.join(' ').replace(/\s+/g,' ').trim());
+      }
+      if(cells.some(Boolean)) matrix.push(cells);
+    }
+    if(matrix.length) tables.push(matrix);
+  }
+  return tables;
+}
+
+async function parseDocxRobusto(file){
+  const buf = await file.arrayBuffer();
+  let text = '';
+  let alunos = [];
+
+  // 1) Primeiro tenta pelo Mammoth, que lê bem documentos .docx comuns.
+  if(window.mammoth){
+    try{
+      const html = await window.mammoth.convertToHtml({arrayBuffer:buf});
+      const container = document.createElement('div');
+      container.innerHTML = html.value || '';
+      text = container.textContent || '';
+      const tables = [...container.querySelectorAll('table')];
+      for(const table of tables){
+        const matrix = [...table.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.textContent.replace(/\s+/g,' ').trim()));
+        const found = rowsFromMatrix(matrix);
+        if(found.length > alunos.length) alunos = found;
+      }
+      if(!alunos.length){
+        const raw = await window.mammoth.extractRawText({arrayBuffer:buf});
+        if(raw?.value && raw.value.length > text.length) text = raw.value;
+      }
+    }catch(e){ console.warn('Falha no Mammoth. Usando leitura interna do DOCX.', e); }
+  }
+
+  // 2) Fallback interno: abre o .docx como ZIP e lê word/document.xml.
+  if(window.JSZip){
+    try{
+      const zip = await window.JSZip.loadAsync(buf);
+      const doc = zip.file('word/document.xml');
+      if(doc){
+        const xml = await doc.async('string');
+        const xmlTables = extractDocxTablesFromXml(xml);
+        for(const matrix of xmlTables){
+          const found = rowsFromMatrix(matrix);
+          if(found.length > alunos.length) alunos = found;
+        }
+        const xmlText = extractDocxTextFromXml(xml);
+        if(xmlText.length > text.length) text = xmlText;
+      }
+    }catch(e){ console.warn('Falha na leitura XML interna do DOCX.', e); }
+  }
+
+  if(!alunos.length) alunos = alunosFromPlainText(text);
+  return {meta:extractMeta(text), alunos};
+}
+
 async function parseFile(file){
   const ext = file.name.split('.').pop().toLowerCase();
   if(['xlsx','xls','csv'].includes(ext)){
@@ -156,19 +240,7 @@ async function parseFile(file){
     return {meta:extractMeta(allText), alunos};
   }
   if(ext === 'docx'){
-    const buf = await file.arrayBuffer();
-    const html = await mammoth.convertToHtml({arrayBuffer:buf});
-    const container = document.createElement('div'); container.innerHTML = html.value;
-    const text = container.textContent || '';
-    let alunos = [];
-    const tables = [...container.querySelectorAll('table')];
-    for(const table of tables){
-      const matrix = [...table.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.textContent.trim()));
-      const found = rowsFromMatrix(matrix);
-      if(found.length > alunos.length) alunos = found;
-    }
-    if(!alunos.length) alunos = alunosFromPlainText(text);
-    return {meta:extractMeta(text), alunos};
+    return await parseDocxRobusto(file);
   }
   if(ext === 'doc' || ext === 'txt'){
     const buf = await file.arrayBuffer();

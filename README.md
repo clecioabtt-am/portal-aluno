@@ -35,3 +35,7 @@ Acesse `admin.html` e use o e-mail `jainamatos@ceeb.com`. Digite qualquer senha 
 Nesta versão, o login local do coordenador padrão `jainamatos@ceeb.com` foi corrigido para não tentar conectar no Supabase antes de abrir o painel. Isso evita o erro `Invalid path specified in request URL` quando a URL do Supabase ainda não está configurada corretamente.
 
 Para salvar notas e consultar alunos, configure `ceeb_site_igual_mockup/config.js` com a Project URL e anon public key reais do Supabase.
+
+
+## Atualização DOCX
+A área administrativa agora aceita arquivos `.docx` com tabela. O parser usa Mammoth e um fallback interno via JSZip para ler as tabelas do Word e organizar os alunos automaticamente.
