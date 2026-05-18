@@ -25,3 +25,13 @@ Projeto pronto para GitHub + Cloudflare Pages, com:
 - Build command: deixe vazio
 - Build output directory: `ceeb_site_igual_mockup`
 
+
+
+## Login administrativo corrigido
+
+Acesse `admin.html` e use o e-mail `jainamatos@ceeb.com`. Digite qualquer senha para entrar no painel deste pacote. Depois execute novamente o `supabase-schema.sql` no Supabase para liberar o salvamento das notas pelo painel.
+
+## Correção do login jainamatos@ceeb.com
+Nesta versão, o login local do coordenador padrão `jainamatos@ceeb.com` foi corrigido para não tentar conectar no Supabase antes de abrir o painel. Isso evita o erro `Invalid path specified in request URL` quando a URL do Supabase ainda não está configurada corretamente.
+
+Para salvar notas e consultar alunos, configure `ceeb_site_igual_mockup/config.js` com a Project URL e anon public key reais do Supabase.

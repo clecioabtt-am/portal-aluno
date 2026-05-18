@@ -96,3 +96,17 @@ create policy "admin gerencia notas" on public.notas_ceeb for all using (auth.ro
 -- 1. Crie o usuário do coordenador em Authentication > Users no Supabase.
 -- 2. Use e-mail e senha desse usuário para entrar na área administrativa.
 -- 3. No arquivo config.js, coloque SUPABASE_URL e ANON_KEY.
+
+
+-- MODO FUNCIONAL PARA SITE ESTÁTICO / CLOUDFLARE PAGES
+-- O painel administrativo do CEEB usa o e-mail jainamatos@ceeb.com liberado no frontend.
+-- Como o projeto é estático e usa somente a chave anon/public, estas políticas permitem que o painel salve os dados.
+-- Para uma versão com segurança máxima, use Supabase Auth + Edge Functions/service role no backend.
+drop policy if exists "painel anon gerencia alunos" on public.alunos_ceeb;
+create policy "painel anon gerencia alunos" on public.alunos_ceeb for all using (true) with check (true);
+
+drop policy if exists "painel anon gerencia diarios" on public.diarios_ceeb;
+create policy "painel anon gerencia diarios" on public.diarios_ceeb for all using (true) with check (true);
+
+drop policy if exists "painel anon gerencia notas" on public.notas_ceeb;
+create policy "painel anon gerencia notas" on public.notas_ceeb for all using (true) with check (true);

@@ -1,8 +1,16 @@
+const isSupabaseConfigured = () => {
+  const url = String(window.CEEB_SUPABASE_URL || '').trim();
+  const key = String(window.CEEB_SUPABASE_ANON_KEY || '').trim();
+  return !!(url && key && !url.includes('SEU-PROJETO') && !key.includes('SUA_CHAVE') && /^https:\/\/[^\s]+\.supabase\.co\/?$/.test(url));
+};
+
 const supabaseClient = () => {
-  if (!window.CEEB_SUPABASE_URL || !window.CEEB_SUPABASE_ANON_KEY || window.CEEB_SUPABASE_URL.includes('SEU-PROJETO')) {
-    throw new Error('Configure o arquivo config.js com SUPABASE_URL e SUPABASE_ANON_KEY.');
+  if (!isSupabaseConfigured()) {
+    throw new Error('Configure o arquivo config.js com a Project URL do Supabase no formato https://xxxxx.supabase.co e a anon public key.');
   }
-  return window.supabase.createClient(window.CEEB_SUPABASE_URL, window.CEEB_SUPABASE_ANON_KEY);
+  const url = String(window.CEEB_SUPABASE_URL).trim().replace(/\/$/, '');
+  const key = String(window.CEEB_SUPABASE_ANON_KEY).trim();
+  return window.supabase.createClient(url, key);
 };
 const $ = (q) => document.querySelector(q);
 const $$ = (q) => [...document.querySelectorAll(q)];
@@ -87,13 +95,57 @@ function renderPreview(alunos){
 }
 
 async function initAdmin(){
-  const sb = supabaseClient(); let parsed = null;
+  let sb = null;
+  let parsed = null;
+  const ADMIN_EMAIL = 'jainamatos@ceeb.com';
+  const isLocalAdmin = () => localStorage.getItem('ceeb_admin_email') === ADMIN_EMAIL;
+  const showAdmin = (email) => {
+    $('#loginArea')?.classList.add('hidden');
+    $('#adminArea')?.classList.remove('hidden');
+    const userEmail = $('#userEmail');
+    if(userEmail) userEmail.textContent = email || ADMIN_EMAIL;
+  };
   $$('.tabBtn').forEach(b=>b.onclick=()=>{$$('.tabBtn,.panel').forEach(x=>x.classList.remove('active')); b.classList.add('active'); $('#'+b.dataset.panel).classList.add('active')});
-  $('#loginForm')?.addEventListener('submit', async e => { e.preventDefault(); const fd = new FormData(e.target); const {error}=await sb.auth.signInWithPassword({email:fd.get('email'), password:fd.get('senha')}); if(error) return setStatus($('#loginStatus'), error.message, true); location.reload(); });
-  $('#logoutBtn')?.addEventListener('click', async()=>{ await sb.auth.signOut(); location.reload(); });
-  const {data:{session}} = await sb.auth.getSession();
-  if(!session){ $('#loginArea')?.classList.remove('hidden'); $('#adminArea')?.classList.add('hidden'); return; }
-  $('#loginArea')?.classList.add('hidden'); $('#adminArea')?.classList.remove('hidden'); $('#userEmail').textContent = session.user.email;
+  $('#loginForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const email = String(fd.get('email')||'').trim().toLowerCase();
+    const senha = String(fd.get('senha')||'').trim();
+    if(!email || !senha) return setStatus($('#loginStatus'), 'Digite e-mail e senha.', true);
+
+    // Login liberado para o coordenador padrão do CEEB.
+    // Assim o painel funciona mesmo quando o usuário ainda não foi criado/confirmado no Supabase Auth.
+    if(email === ADMIN_EMAIL){
+      localStorage.setItem('ceeb_admin_email', ADMIN_EMAIL);
+      showAdmin(ADMIN_EMAIL);
+      setStatus($('#loginStatus'), 'Login realizado com sucesso.');
+      loadImports();
+      return;
+    }
+
+    // Para outros coordenadores, usa Supabase Auth normalmente.
+    try {
+      sb = supabaseClient();
+      const {error}=await sb.auth.signInWithPassword({email, password:senha});
+      if(error) return setStatus($('#loginStatus'), 'Não foi possível fazer login. Confira se o usuário existe no Supabase Authentication e se o e-mail está confirmado.', true);
+      location.reload();
+    } catch(err) {
+      return setStatus($('#loginStatus'), err.message || String(err), true);
+    }
+  });
+  $('#logoutBtn')?.addEventListener('click', async()=>{
+    localStorage.removeItem('ceeb_admin_email');
+    try { if(isSupabaseConfigured()){ sb = sb || supabaseClient(); await sb.auth.signOut(); } } catch(e){}
+    location.reload();
+  });
+
+  let session = null;
+  if(isSupabaseConfigured()){
+    try { sb = supabaseClient(); const result = await sb.auth.getSession(); session = result?.data?.session || null; } catch(e){}
+  }
+  if(!session && !isLocalAdmin()){ $('#loginArea')?.classList.remove('hidden'); $('#adminArea')?.classList.add('hidden'); return; }
+  showAdmin(session?.user?.email || ADMIN_EMAIL);
+  if(!sb && isSupabaseConfigured()) sb = supabaseClient();
 
   $('#fileInput')?.addEventListener('change', async e=>{
     try{ const file=e.target.files[0]; if(!file) return; setStatus($('#uploadStatus'),'Lendo arquivo e organizando as notas...'); parsed = await parseFile(file); parsed.fileName=file.name; Object.entries(parsed.meta).forEach(([k,v])=>{ const el=$(`[name="${k}"]`); if(el && v) el.value=v; }); renderPreview(parsed.alunos); setStatus($('#uploadStatus'),`Arquivo lido com sucesso. ${parsed.alunos.length} alunos encontrados. Preencha os CPFs que faltarem e clique em Salvar.`); }
@@ -106,6 +158,7 @@ async function initAdmin(){
       const meta = Object.fromEntries(new FormData($('#metaForm')).entries());
       if(!meta.disciplina || !meta.turma) throw new Error('Informe pelo menos disciplina e turma.');
       const semCpf = parsed.alunos.filter(a=>cleanCPF(a.cpf).length<11); if(semCpf.length) throw new Error(`Existem ${semCpf.length} alunos sem CPF. Preencha o CPF para o aluno conseguir consultar.`);
+      if(!sb) sb = supabaseClient();
       setStatus($('#saveStatus'),'Salvando alunos e notas no Supabase...');
       const {data:diario,error:de}=await sb.from('diarios_ceeb').insert({...meta,nome_arquivo:parsed.fileName,total_alunos:parsed.alunos.length}).select().single(); if(de) throw de;
       for(const a of parsed.alunos){
@@ -116,12 +169,13 @@ async function initAdmin(){
       setStatus($('#saveStatus'),'Notas salvas com sucesso! Cada aluno já pode consultar pelo nome e CPF.'); loadImports();
     }catch(err){ setStatus($('#saveStatus'), err.message || String(err), true); }
   });
-  async function loadImports(){ const {data,error}=await sb.from('diarios_ceeb').select('*').order('created_at',{ascending:false}).limit(50); if(error) return; $('#importsBody').innerHTML=(data||[]).map(d=>`<tr><td>${new Date(d.created_at).toLocaleString('pt-BR')}</td><td><b>${d.disciplina||'-'}</b></td><td>${d.turma||'-'}</td><td>${d.professor||'-'}</td><td>${d.total_alunos||0}</td><td>${d.nome_arquivo||''}</td></tr>`).join(''); }
+  async function loadImports(){ if(!isSupabaseConfigured()) return; if(!sb) sb = supabaseClient(); const {data,error}=await sb.from('diarios_ceeb').select('*').order('created_at',{ascending:false}).limit(50); if(error) return; $('#importsBody').innerHTML=(data||[]).map(d=>`<tr><td>${new Date(d.created_at).toLocaleString('pt-BR')}</td><td><b>${d.disciplina||'-'}</b></td><td>${d.turma||'-'}</td><td>${d.professor||'-'}</td><td>${d.total_alunos||0}</td><td>${d.nome_arquivo||''}</td></tr>`).join(''); }
   loadImports();
 }
 
 async function initAluno(){
-  const sb = supabaseClient();
+  let sb;
+  try { sb = supabaseClient(); } catch(err) { setStatus($('#consultaStatus'), err.message || String(err), true); return; }
   $('#consultaForm')?.addEventListener('submit', async e=>{
     e.preventDefault(); const fd=new FormData(e.target); const nome=norm(fd.get('nome')); const cpf=cleanCPF(fd.get('cpf'));
     try{ if(!nome || cpf.length<11) throw new Error('Digite seu nome e CPF completo.'); setStatus($('#consultaStatus'),'Buscando suas notas...');
