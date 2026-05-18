@@ -1,0 +1,10 @@
+CORREÇÃO DO ERRO: Could not find the table public.diarios_ceeb in the schema cache
+
+1. Acesse o Supabase do projeto.
+2. Vá em SQL Editor > New query.
+3. Abra o arquivo CORRIGIR_ERRO_SUPABASE.sql deste projeto.
+4. Copie todo o conteúdo, cole no SQL Editor e clique em Run.
+5. Aguarde finalizar sem erro.
+6. Volte para o painel administrativo do site e clique novamente em Salvar notas no Supabase.
+
+Observação: o schema foi corrigido para não usar coluna gerada com unaccent, pois isso pode impedir a criação das tabelas no Supabase.

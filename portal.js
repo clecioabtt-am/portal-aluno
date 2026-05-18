@@ -344,12 +344,18 @@ async function initAdmin(){
       setStatus($('#saveStatus'),'Salvando alunos e notas no Supabase...');
       const {data:diario,error:de}=await sb.from('diarios_ceeb').insert({...meta,nome_arquivo:parsed.fileName,total_alunos:parsed.alunos.length}).select().single(); if(de) throw de;
       for(const a of parsed.alunos){
-        const cpf=cleanCPF(a.cpf); let {data:aluno,error:ae}=await sb.from('alunos_ceeb').upsert({nome:a.nome,cpf},{onConflict:'cpf'}).select().single(); if(ae) throw ae;
+        const cpf=cleanCPF(a.cpf); let {data:aluno,error:ae}=await sb.from('alunos_ceeb').upsert({nome:a.nome,nome_normalizado:norm(a.nome),cpf},{onConflict:'cpf'}).select().single(); if(ae) throw ae;
         const nota={...a, cpf:undefined, diario_id:diario.id, aluno_id:aluno.id, ...meta};
         const {error:ne}=await sb.from('notas_ceeb').upsert(nota,{onConflict:'aluno_id,disciplina,turma,periodo'}); if(ne) throw ne;
       }
       setStatus($('#saveStatus'),'Notas salvas com sucesso! Cada aluno já pode consultar pelo nome e CPF.'); loadImports();
-    }catch(err){ setStatus($('#saveStatus'), err.message || String(err), true); }
+    }catch(err){
+      let msg = err.message || String(err);
+      if(msg.includes('Could not find the table') || msg.includes('schema cache') || msg.includes('diarios_ceeb')){
+        msg = 'A tabela do Supabase ainda não existe ou o SQL antigo falhou. Abra o arquivo CORRIGIR_ERRO_SUPABASE.sql no ZIP, execute tudo no SQL Editor do Supabase e tente salvar novamente.';
+      }
+      setStatus($('#saveStatus'), msg, true);
+    }
   });
   async function loadImports(){ if(!isSupabaseConfigured()) return; if(!sb) sb = supabaseClient(); const {data,error}=await sb.from('diarios_ceeb').select('*').order('created_at',{ascending:false}).limit(50); if(error) return; $('#importsBody').innerHTML=(data||[]).map(d=>`<tr><td>${new Date(d.created_at).toLocaleString('pt-BR')}</td><td><b>${d.disciplina||'-'}</b></td><td>${d.turma||'-'}</td><td>${d.professor||'-'}</td><td>${d.total_alunos||0}</td><td>${d.nome_arquivo||''}</td></tr>`).join(''); }
   loadImports();
