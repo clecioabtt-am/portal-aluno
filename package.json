@@ -1,0 +1,12 @@
+{
+  "name": "ceeb-site-cloudflare",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node -e \"console.log('Site estático pronto para Cloudflare Pages')\"",
+    "deploy": "wrangler pages deploy ceeb_site_igual_mockup --project-name=ceeb"
+  },
+  "devDependencies": {
+    "wrangler": "latest"
+  }
+}

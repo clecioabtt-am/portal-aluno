@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+<title id="title">Símbolo de Enfermagem</title>
+<desc id="desc">Lamparina, serpente e cruz verde representando a enfermagem.</desc>
+<defs>
+  <linearGradient id="g" x1="80" y1="60" x2="430" y2="460" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#13b85b"/>
+    <stop offset="1" stop-color="#006b31"/>
+  </linearGradient>
+  <filter id="s" x="-20%" y="-20%" width="140%" height="140%">
+    <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="#003d25" flood-opacity=".22"/>
+  </filter>
+</defs>
+<circle cx="256" cy="256" r="232" fill="#ffffff" stroke="url(#g)" stroke-width="18"/>
+<circle cx="256" cy="256" r="202" fill="#f3fff8" stroke="#bdebcf" stroke-width="4"/>
+<g filter="url(#s)">
+  <path d="M251 72c37 22 48 55 31 83-12 20-35 29-56 41-22 13-39 30-38 57 1 32 28 49 58 45 25-3 45-20 46-44 1-18-11-31-30-35" fill="none" stroke="#006b31" stroke-width="20" stroke-linecap="round"/>
+  <path d="M254 80c-17 38-10 67 16 84 21 13 49 12 69 29 22 19 20 52-3 72-25 22-64 16-87-10" fill="none" stroke="#13a452" stroke-width="14" stroke-linecap="round" opacity=".9"/>
+  <path d="M159 308h194c-9 62-50 93-97 93s-88-31-97-93Z" fill="url(#g)"/>
+  <path d="M129 287h254c9 0 16 7 16 16s-7 16-16 16H129c-9 0-16-7-16-16s7-16 16-16Z" fill="#005a2b"/>
+  <path d="M205 222h102v44H205z" fill="#0e9f4d" rx="8"/>
+  <path d="M235 192h42v104h-42z" fill="#0e9f4d" rx="8"/>
+  <path d="M208 121c13-37 45-56 80-49 6 38-10 69-45 88-16-11-27-24-35-39Z" fill="#f5c542" stroke="#d6931f" stroke-width="8"/>
+</g>
+<text x="256" y="454" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="900" fill="#006b31">ENFERMAGEM</text>
+</svg>
