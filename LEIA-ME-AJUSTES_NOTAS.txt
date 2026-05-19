@@ -1,0 +1,11 @@
+AJUSTES IMPLEMENTADOS
+====================
+1. Edição das notas dos alunos ao abrir uma tabela em "Minhas Tabelas".
+2. Substituição do título "Aproveitamento" por "Média".
+3. Formatação das notas em padrão brasileiro com duas casas decimais (10,00 / 9,50).
+4. Centralização visual das colunas de notas no Portal do Aluno.
+
+IMPORTANTE
+==========
+Não é necessário executar nenhum novo script SQL.
+O banco de dados atual e as tabelas existentes continuam sendo utilizados normalmente.

@@ -1,3 +1,9 @@
+function formatarNotaBR(v){
+  if(v===null||v===undefined||v==='') return '-';
+  const n = Number(v);
+  if(Number.isNaN(n)) return v;
+  return n.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});}
+
 const menuBtn = document.querySelector('.menuBtn');
 const nav = document.querySelector('.nav');
 menuBtn?.addEventListener('click', () => nav.classList.toggle('open'));

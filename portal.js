@@ -1,3 +1,9 @@
+function formatarNotaBR(v){
+  if(v===null||v===undefined||v==='') return '-';
+  const n = Number(v);
+  if(Number.isNaN(n)) return v;
+  return n.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});}
+
 const isSupabaseConfigured = () => {
   const url = String(window.CEEB_SUPABASE_URL || '').trim();
   const key = String(window.CEEB_SUPABASE_ANON_KEY || '').trim();
@@ -502,5 +508,5 @@ async function initAluno(){
 }
 function renderBoletim(aluno, notas){
   const r=$('#resultado'); r.classList.remove('hidden');
-  r.innerHTML=`<div class="card"><div class="boletimTop"><div><h2>Boletim Digital</h2><p><b>Aluno:</b> ${aluno.nome}<br><b>CPF:</b> ${aluno.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4')}</p></div><div><button class="btn noPrint" onclick="window.print()">Imprimir / Salvar PDF</button></div></div></div>${notas.length?notas.map(n=>`<article class="subjectCard"><h3>${n.disciplina||'Disciplina'} <span class="pill">${n.situacao||'Lançada'}</span></h3><p><b>Curso:</b> ${n.curso||'-'} &nbsp; <b>Turma:</b> ${n.turma||'-'}<br><b>Professor:</b> ${n.professor||'-'}<br><b>Horário:</b> ${n.horario||'-'} &nbsp; <b>Carga horária:</b> ${n.carga_horaria||'-'} &nbsp; <b>Período:</b> ${n.periodo||'-'}</p><div class="tableWrap"><table><thead><tr><th>1ª</th><th>2ª</th><th>3ª</th><th>4ª</th><th>Aproveitamento</th><th>Faltas</th><th>Recuperação</th><th>Média pós rec.</th></tr></thead><tbody><tr><td class="grade">${n.nota_1??'-'}</td><td class="grade">${n.nota_2??'-'}</td><td class="grade">${n.nota_3??'-'}</td><td class="grade">${n.nota_4??'-'}</td><td class="grade">${n.aproveitamento??'-'}</td><td>${n.faltas??0}</td><td>${n.recuperacao??'-'}</td><td>${n.media_pos_recuperacao??'-'}</td></tr></tbody></table></div></article>`).join(''):'<div class="card"><p>Nenhuma nota lançada para este aluno ainda.</p></div>'}`;
+  r.innerHTML=`<div class="card"><div class="boletimTop"><div><h2>Boletim Digital</h2><p><b>Aluno:</b> ${aluno.nome}<br><b>CPF:</b> ${aluno.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4')}</p></div><div><button class="btn noPrint" onclick="window.print()">Imprimir / Salvar PDF</button></div></div></div>${notas.length?notas.map(n=>`<article class="subjectCard"><h3>${n.disciplina||'Disciplina'} <span class="pill">${n.situacao||'Lançada'}</span></h3><p><b>Curso:</b> ${n.curso||'-'} &nbsp; <b>Turma:</b> ${n.turma||'-'}<br><b>Professor:</b> ${n.professor||'-'}<br><b>Horário:</b> ${n.horario||'-'} &nbsp; <b>Carga horária:</b> ${n.carga_horaria||'-'} &nbsp; <b>Período:</b> ${n.periodo||'-'}</p><div class="tableWrap"><table><thead><tr><th>1ª</th><th>2ª</th><th>3ª</th><th>4ª</th><th>Média</th><th>Faltas</th><th>Recuperação</th><th>Média pós rec.</th></tr></thead><tbody><tr><td class="grade">${n.nota_1??'-'}</td><td class="grade">${n.nota_2??'-'}</td><td class="grade">${n.nota_3??'-'}</td><td class="grade">${n.nota_4??'-'}</td><td class="grade">${n.aproveitamento??'-'}</td><td>${n.faltas??0}</td><td>${n.recuperacao??'-'}</td><td>${n.media_pos_recuperacao??'-'}</td></tr></tbody></table></div></article>`).join(''):'<div class="card"><p>Nenhuma nota lançada para este aluno ainda.</p></div>'}`;
 }
