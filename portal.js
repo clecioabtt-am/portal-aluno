@@ -264,33 +264,38 @@ function renderPreview(alunos){
 async function initAdmin(){
   let sb = null;
   let parsed = null;
-  const ADMIN_EMAIL = 'jainamatos@ceeb.com';
-  const isLocalAdmin = () => localStorage.getItem('ceeb_admin_email') === ADMIN_EMAIL;
+  let session = null;
+  let currentDiarioId = null;
+
+  const esc = (v='') => String(v ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const cpfMask = (v='') => cleanCPF(v).replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4');
+  const getUserId = () => session?.user?.id || null;
+  const showPanel = (panelId) => {
+    $$('.tabBtn,.panel').forEach(x=>x.classList.remove('active'));
+    const btn = $(`.tabBtn[data-panel="${panelId}"]`);
+    if(btn) btn.classList.add('active');
+    const panel = $('#'+panelId);
+    if(panel) panel.classList.add('active');
+  };
   const showAdmin = (email) => {
     $('#loginArea')?.classList.add('hidden');
     $('#adminArea')?.classList.remove('hidden');
     const userEmail = $('#userEmail');
-    if(userEmail) userEmail.textContent = email || ADMIN_EMAIL;
+    if(userEmail) userEmail.textContent = email || '';
   };
-  $$('.tabBtn').forEach(b=>b.onclick=()=>{$$('.tabBtn,.panel').forEach(x=>x.classList.remove('active')); b.classList.add('active'); $('#'+b.dataset.panel).classList.add('active')});
+
+  $$('.tabBtn').forEach(b=>b.onclick=()=>{
+    showPanel(b.dataset.panel);
+    if(b.dataset.panel === 'tabelasPanel') loadTables();
+    if(b.dataset.panel === 'historicoPanel') loadImports();
+  });
+
   $('#loginForm')?.addEventListener('submit', async e => {
     e.preventDefault();
     const fd = new FormData(e.target);
     const email = String(fd.get('email')||'').trim().toLowerCase();
     const senha = String(fd.get('senha')||'').trim();
     if(!email || !senha) return setStatus($('#loginStatus'), 'Digite e-mail e senha.', true);
-
-    // Login liberado para o coordenador padrão do CEEB.
-    // Assim o painel funciona mesmo quando o usuário ainda não foi criado/confirmado no Supabase Auth.
-    if(email === ADMIN_EMAIL){
-      localStorage.setItem('ceeb_admin_email', ADMIN_EMAIL);
-      showAdmin(ADMIN_EMAIL);
-      setStatus($('#loginStatus'), 'Login realizado com sucesso.');
-      loadImports();
-      return;
-    }
-
-    // Para outros coordenadores, usa Supabase Auth normalmente.
     try {
       sb = supabaseClient();
       const {error}=await sb.auth.signInWithPassword({email, password:senha});
@@ -300,19 +305,18 @@ async function initAdmin(){
       return setStatus($('#loginStatus'), err.message || String(err), true);
     }
   });
+
   $('#logoutBtn')?.addEventListener('click', async()=>{
-    localStorage.removeItem('ceeb_admin_email');
     try { if(isSupabaseConfigured()){ sb = sb || supabaseClient(); await sb.auth.signOut(); } } catch(e){}
     location.reload();
   });
 
-  let session = null;
   if(isSupabaseConfigured()){
     try { sb = supabaseClient(); const result = await sb.auth.getSession(); session = result?.data?.session || null; } catch(e){}
   }
-  if(!session && !isLocalAdmin()){ $('#loginArea')?.classList.remove('hidden'); $('#adminArea')?.classList.add('hidden'); return; }
-  showAdmin(session?.user?.email || ADMIN_EMAIL);
-  if(!sb && isSupabaseConfigured()) sb = supabaseClient();
+  if(!session){ $('#loginArea')?.classList.remove('hidden'); $('#adminArea')?.classList.add('hidden'); return; }
+  showAdmin(session?.user?.email || 'Coordenador');
+  if(!sb) sb = supabaseClient();
 
   $('#fileInput')?.addEventListener('change', async e=>{
     try{ const file=e.target.files[0]; if(!file) return; setStatus($('#uploadStatus'),'Lendo arquivo e organizando as notas...'); parsed = await parseFile(file); parsed.fileName=file.name; Object.entries(parsed.meta).forEach(([k,v])=>{ const el=$(`[name="${k}"]`); if(el && v) el.value=v; }); renderPreview(parsed.alunos); setStatus($('#uploadStatus'),`Arquivo lido com sucesso. ${parsed.alunos.length} alunos encontrados. Preencha os CPFs que faltarem e clique em Salvar.`); }
@@ -330,9 +334,7 @@ async function initAdmin(){
     renderPreview(parsed.alunos);
     setStatus($('#uploadStatus'), `${removidos.length} aluno(s) removido(s) da prévia: ${removidos.slice(0,3).join(', ')}${removidos.length>3?'...':''}`);
   });
-  $('#selectAllPreview')?.addEventListener('change', e=>{
-    $$('.studentSelect').forEach(ch=>ch.checked = e.target.checked);
-  });
+  $('#selectAllPreview')?.addEventListener('change', e=>{ $$('.studentSelect').forEach(ch=>ch.checked = e.target.checked); });
 
   $('#saveImport')?.addEventListener('click', async()=>{
     try{
@@ -341,13 +343,17 @@ async function initAdmin(){
       if(!meta.disciplina || !meta.turma) throw new Error('Informe pelo menos disciplina e turma.');
       const semCpf = parsed.alunos.filter(a=>cleanCPF(a.cpf).length<11); if(semCpf.length) throw new Error(`Existem ${semCpf.length} alunos sem CPF. Preencha o CPF para o aluno conseguir consultar.`);
       if(!sb) sb = supabaseClient();
+      const coordenador_id = getUserId();
+      if(!coordenador_id) throw new Error('Sessão do coordenador não encontrada. Saia e entre novamente.');
       setStatus($('#saveStatus'),'Salvando alunos e notas no Supabase...');
-      const {data:diario,error:de}=await sb.from('diarios_ceeb').insert({...meta,nome_arquivo:parsed.fileName,total_alunos:parsed.alunos.length}).select().single(); if(de) throw de;
+      const {data:diario,error:de}=await sb.from('diarios_ceeb').insert({...meta,coordenador_id,nome_arquivo:parsed.fileName,total_alunos:parsed.alunos.length}).select().single(); if(de) throw de;
       for(const a of parsed.alunos){
-        const cpf=cleanCPF(a.cpf); let {data:aluno,error:ae}=await sb.from('alunos_ceeb').upsert({nome:a.nome,nome_normalizado:norm(a.nome),cpf},{onConflict:'cpf'}).select().single(); if(ae) throw ae;
+        const cpf=cleanCPF(a.cpf);
+        let {data:aluno,error:ae}=await sb.from('alunos_ceeb').upsert({nome:a.nome,nome_normalizado:norm(a.nome),cpf,coordenador_id},{onConflict:'coordenador_id,cpf'}).select().single(); if(ae) throw ae;
         const nota = {
           diario_id: diario.id,
           aluno_id: aluno.id,
+          coordenador_id,
           curso: meta.curso || null,
           turma: meta.turma || null,
           professor: meta.professor || null,
@@ -366,19 +372,119 @@ async function initAdmin(){
           situacao: a.situacao || null,
           observacao: a.observacao || null
         };
-        const {error:ne}=await sb.from('notas_ceeb').upsert(nota,{onConflict:'aluno_id,disciplina,turma,periodo'}); if(ne) throw ne;
+        const {error:ne}=await sb.from('notas_ceeb').upsert(nota,{onConflict:'aluno_id,disciplina,turma,periodo,coordenador_id'}); if(ne) throw ne;
       }
-      setStatus($('#saveStatus'),'Notas salvas com sucesso! Cada aluno já pode consultar pelo nome e CPF.'); loadImports();
+      setStatus($('#saveStatus'),'Notas salvas com sucesso! A tabela ficou vinculada ao coordenador logado.');
+      await loadTables(); await loadImports();
     }catch(err){
       let msg = err.message || String(err);
-      if(msg.includes('Could not find the table') || msg.includes('schema cache') || msg.includes('diarios_ceeb')){
-        msg = 'A tabela do Supabase ainda não existe ou o SQL antigo falhou. Abra o arquivo CORRIGIR_ERRO_SUPABASE.sql no ZIP, execute tudo no SQL Editor do Supabase e tente salvar novamente.';
+      if(msg.includes('schema cache') || msg.includes('coordenador_id') || msg.includes('there is no unique') || msg.includes('notas_ceeb')){
+        msg = 'O banco ainda precisa da migração de coordenadores. Execute o arquivo SUPABASE_COORDENADORES_RLS.sql no SQL Editor do Supabase e depois tente novamente.';
       }
       setStatus($('#saveStatus'), msg, true);
     }
   });
-  async function loadImports(){ if(!isSupabaseConfigured()) return; if(!sb) sb = supabaseClient(); const {data,error}=await sb.from('diarios_ceeb').select('*').order('created_at',{ascending:false}).limit(50); if(error) return; $('#importsBody').innerHTML=(data||[]).map(d=>`<tr><td>${new Date(d.created_at).toLocaleString('pt-BR')}</td><td><b>${d.disciplina||'-'}</b></td><td>${d.turma||'-'}</td><td>${d.professor||'-'}</td><td>${d.total_alunos||0}</td><td>${d.nome_arquivo||''}</td></tr>`).join(''); }
-  loadImports();
+
+  async function loadTables(){
+    if(!sb) sb = supabaseClient();
+    const userId = getUserId();
+    const tbody = $('#tablesBody');
+    if(!tbody || !userId) return;
+    const {data,error}=await sb.from('diarios_ceeb').select('*').eq('coordenador_id',userId).order('created_at',{ascending:false});
+    if(error){ tbody.innerHTML=`<tr><td colspan="7">Erro ao carregar tabelas: ${esc(error.message)}</td></tr>`; return; }
+    tbody.innerHTML=(data||[]).length ? data.map(d=>`<tr><td>${new Date(d.created_at).toLocaleString('pt-BR')}</td><td><b>${esc(d.disciplina||'-')}</b></td><td>${esc(d.turma||'-')}</td><td>${esc(d.professor||'-')}</td><td>${d.total_alunos||0}</td><td>${esc(d.nome_arquivo||'')}</td><td><button class="outline" data-open="${d.id}">Abrir</button> <button class="outline danger" data-del="${d.id}">Excluir</button></td></tr>`).join('') : '<tr><td colspan="7">Nenhuma tabela enviada por este coordenador ainda.</td></tr>';
+  }
+
+  $('#tablesBody')?.addEventListener('click', async e=>{
+    const openId = e.target?.dataset?.open;
+    const delId = e.target?.dataset?.del;
+    if(openId) return openTable(openId);
+    if(delId) return deleteTable(delId);
+  });
+
+  async function deleteTable(diarioId){
+    if(!confirm('Tem certeza que deseja excluir esta tabela? As notas vinculadas a ela serão removidas do banco.')) return;
+    try{
+      setStatus($('#tablesStatus'),'Excluindo tabela...');
+      const {error}=await sb.from('diarios_ceeb').delete().eq('id',diarioId).eq('coordenador_id',getUserId());
+      if(error) throw error;
+      setStatus($('#tablesStatus'),'Tabela excluída com sucesso.');
+      await loadTables(); await loadImports();
+    }catch(err){ setStatus($('#tablesStatus'), err.message || String(err), true); }
+  }
+
+  async function openTable(diarioId){
+    try{
+      currentDiarioId = diarioId;
+      setStatus($('#editorStatus'),'Carregando alunos da tabela...');
+      const {data:diario,error:de}=await sb.from('diarios_ceeb').select('*').eq('id',diarioId).eq('coordenador_id',getUserId()).single();
+      if(de) throw de;
+      const {data:notas,error:ne}=await sb.from('notas_ceeb').select('id, aluno_id, disciplina, turma, situacao, alunos_ceeb(id,nome,cpf)').eq('diario_id',diarioId).eq('coordenador_id',getUserId()).order('disciplina');
+      if(ne) throw ne;
+      $('#editorTitle').textContent = `Editar tabela: ${diario.disciplina || diario.nome_arquivo || 'Sem nome'}`;
+      $('#editorSubtitle').textContent = `${diario.turma || '-'} • ${diario.professor || '-'} • ${notas?.length || 0} aluno(s)`;
+      renderEditor(notas||[]);
+      $('#editorStatus')?.classList.add('hidden');
+      showPanel('editorPanel');
+    }catch(err){ setStatus($('#tablesStatus'), err.message || String(err), true); }
+  }
+
+  function renderEditor(notas){
+    const tbody = $('#editorBody'); if(!tbody) return;
+    tbody.innerHTML = notas.length ? notas.map(n=>{
+      const a = n.alunos_ceeb || {};
+      return `<tr data-nota="${n.id}" data-aluno="${a.id||''}"><td><input data-k="nome" value="${esc(a.nome||'')}"></td><td><input data-k="cpf" value="${esc(cpfMask(a.cpf||''))}"></td><td>${esc(n.disciplina||'-')}</td><td>${esc(n.turma||'-')}</td><td>${esc(n.situacao||'-')}</td><td><button class="outline" data-save-row="${n.id}">Salvar</button> <button class="outline danger" data-delete-row="${n.id}">Excluir aluno</button></td></tr>`;
+    }).join('') : '<tr><td colspan="6">Nenhum aluno nesta tabela.</td></tr>';
+  }
+
+  $('#editorBody')?.addEventListener('click', async e=>{
+    const saveId = e.target?.dataset?.saveRow;
+    const deleteId = e.target?.dataset?.deleteRow;
+    if(saveId) return saveStudentRow(saveId);
+    if(deleteId) return deleteStudentRow(deleteId);
+  });
+  $('#backToTables')?.addEventListener('click', async()=>{ await loadTables(); showPanel('tabelasPanel'); });
+
+  async function saveStudentRow(notaId){
+    try{
+      const tr = $(`tr[data-nota="${notaId}"]`);
+      const alunoId = tr?.dataset?.aluno;
+      if(!tr || !alunoId) throw new Error('Aluno não encontrado nesta linha.');
+      const nome = tr.querySelector('[data-k="nome"]')?.value?.trim();
+      const cpf = cleanCPF(tr.querySelector('[data-k="cpf"]')?.value || '');
+      if(!nome || cpf.length < 11) throw new Error('Informe nome completo e CPF válido.');
+      setStatus($('#editorStatus'),'Salvando alteração do aluno...');
+      const {error}=await sb.from('alunos_ceeb').update({nome,nome_normalizado:norm(nome),cpf}).eq('id',alunoId).eq('coordenador_id',getUserId());
+      if(error) throw error;
+      setStatus($('#editorStatus'),'Aluno atualizado com sucesso.');
+      if(currentDiarioId) await openTable(currentDiarioId);
+    }catch(err){ setStatus($('#editorStatus'), err.message || String(err), true); }
+  }
+
+  async function deleteStudentRow(notaId){
+    if(!confirm('Deseja excluir este aluno desta tabela?')) return;
+    try{
+      setStatus($('#editorStatus'),'Excluindo aluno desta tabela...');
+      const {error}=await sb.from('notas_ceeb').delete().eq('id',notaId).eq('coordenador_id',getUserId());
+      if(error) throw error;
+      setStatus($('#editorStatus'),'Aluno removido da tabela.');
+      if(currentDiarioId) await openTable(currentDiarioId);
+      await loadTables(); await loadImports();
+    }catch(err){ setStatus($('#editorStatus'), err.message || String(err), true); }
+  }
+
+  async function loadImports(){
+    if(!isSupabaseConfigured()) return;
+    if(!sb) sb = supabaseClient();
+    const userId = getUserId();
+    if(!userId) return;
+    const {data,error}=await sb.from('diarios_ceeb').select('*').eq('coordenador_id',userId).order('created_at',{ascending:false}).limit(50);
+    if(error) return;
+    $('#importsBody').innerHTML=(data||[]).map(d=>`<tr><td>${new Date(d.created_at).toLocaleString('pt-BR')}</td><td><b>${esc(d.disciplina||'-')}</b></td><td>${esc(d.turma||'-')}</td><td>${esc(d.professor||'-')}</td><td>${d.total_alunos||0}</td><td>${esc(d.nome_arquivo||'')}</td></tr>`).join('') || '<tr><td colspan="6">Nenhuma importação encontrada.</td></tr>';
+  }
+
+  await loadTables();
+  await loadImports();
 }
 
 async function initAluno(){

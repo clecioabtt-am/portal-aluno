@@ -1,0 +1,14 @@
+PORTAL DO ALUNO CEEB - VERSÃO COM ISOLAMENTO POR COORDENADOR
+
+1. Execute o arquivo SUPABASE_COORDENADORES_RLS.sql no Supabase SQL Editor.
+2. Crie os usuários dos coordenadores em Authentication > Users:
+   - jainamatos@ceeb.com
+   - login do Luciano
+   - login do Gabriel
+3. Publique este projeto atualizado no GitHub/Cloudflare Pages.
+4. Cada coordenador deve entrar em admin.html com seu próprio e-mail e senha.
+5. A aba Minhas Tabelas mostra apenas os uploads do coordenador logado.
+6. Dentro de Minhas Tabelas é possível abrir, editar nome/CPF do aluno, remover aluno da tabela e excluir a tabela inteira.
+
+Observação importante:
+O login local antigo da Jaina foi removido. Agora todos os coordenadores precisam existir no Supabase Authentication para que o isolamento seja seguro.
