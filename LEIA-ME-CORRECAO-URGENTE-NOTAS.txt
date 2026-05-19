@@ -1,0 +1,19 @@
+CORREÇÃO URGENTE - NOTAS / MÉDIA / SITUAÇÃO / EDITOR
+
+Ajustes aplicados:
+1. Portal do Aluno:
+   - Notas exibidas com duas casas decimais no padrão brasileiro: 10,00 / 9,00 / 8,75.
+   - Coluna "Situação" adicionada no boletim.
+   - Situação "Aprovado" aparece em verde.
+   - Situação "Reprovado" aparece em vermelho.
+   - "Aproveitamento" foi substituído por "Média".
+   - Valores das notas centralizados.
+
+2. Painel do Coordenador:
+   - Ao abrir uma tabela em "Minhas Tabelas", agora é possível editar:
+     Nome, CPF, Nota 1º, Nota 2º, Nota 3º, Nota 4º, Média, Faltas, Recuperação e Situação.
+   - O botão "Salvar" atualiza tanto os dados do aluno quanto as notas no Supabase.
+
+SQL:
+- Não precisa criar nova tabela.
+- Não precisa executar novo SQL, desde que você já tenha executado o SUPABASE_COORDENADORES_RLS.sql da versão anterior.

@@ -1,8 +1,22 @@
 function formatarNotaBR(v){
-  if(v===null||v===undefined||v==='') return '-';
-  const n = Number(v);
-  if(Number.isNaN(n)) return v;
-  return n.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2});}
+  if(v===null || v===undefined || v==='') return '-';
+  const n = typeof v === 'number' ? v : Number(String(v).replace(',', '.').replace(/[^0-9.\-]/g,''));
+  if(Number.isNaN(n)) return String(v);
+  return n.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function situacaoClasse(v=''){
+  const s = norm(v);
+  if(s.includes('aprov')) return 'aprovado';
+  if(s.includes('reprov') || s.includes('retid')) return 'reprovado';
+  if(s.includes('recuper')) return 'recuperacao';
+  return '';
+}
+function calcularMediaLinha(n){
+  const vals = [n.nota_1,n.nota_2,n.nota_3,n.nota_4].map(toNum).filter(v=>v!==null);
+  if(n.aproveitamento!==null && n.aproveitamento!==undefined && n.aproveitamento!=='') return n.aproveitamento;
+  if(!vals.length) return null;
+  return vals.reduce((a,b)=>a+b,0)/vals.length;
+}
 
 const isSupabaseConfigured = () => {
   const url = String(window.CEEB_SUPABASE_URL || '').trim();
@@ -262,7 +276,7 @@ async function parseFile(file){
 }
 function renderPreview(alunos){
   const tbody = $('#previewBody'); if(!tbody) return;
-  tbody.innerHTML = alunos.length ? alunos.map((a,i)=>`<tr><td class="checkCol"><input class="studentSelect" type="checkbox" data-i="${i}" title="Selecionar aluno para excluir"></td><td>${i+1}</td><td><b>${a.nome}</b></td><td><input data-i="${i}" data-k="cpf" value="${a.cpf||''}" placeholder="CPF obrigatório"></td><td>${a.nota_1??''}</td><td>${a.nota_2??''}</td><td>${a.nota_3??''}</td><td>${a.aproveitamento??''}</td><td>${a.faltas??0}</td><td>${a.situacao||''}</td></tr>`).join('') : '<tr><td colspan="10">Nenhum aluno na prévia.</td></tr>';
+  tbody.innerHTML = alunos.length ? alunos.map((a,i)=>`<tr><td class="checkCol"><input class="studentSelect" type="checkbox" data-i="${i}" title="Selecionar aluno para excluir"></td><td>${i+1}</td><td><b>${a.nome}</b></td><td><input data-i="${i}" data-k="cpf" value="${a.cpf||''}" placeholder="CPF obrigatório"></td><td>${formatarNotaBR(a.nota_1)}</td><td>${formatarNotaBR(a.nota_2)}</td><td>${formatarNotaBR(a.nota_3)}</td><td>${formatarNotaBR(a.aproveitamento)}</td><td>${a.faltas??0}</td><td>${a.situacao||''}</td></tr>`).join('') : '<tr><td colspan="10">Nenhum aluno na prévia.</td></tr>';
   const selectAll = $('#selectAllPreview');
   if(selectAll) selectAll.checked = false;
 }
@@ -425,7 +439,7 @@ async function initAdmin(){
       setStatus($('#editorStatus'),'Carregando alunos da tabela...');
       const {data:diario,error:de}=await sb.from('diarios_ceeb').select('*').eq('id',diarioId).eq('coordenador_id',getUserId()).single();
       if(de) throw de;
-      const {data:notas,error:ne}=await sb.from('notas_ceeb').select('id, aluno_id, disciplina, turma, situacao, alunos_ceeb(id,nome,cpf)').eq('diario_id',diarioId).eq('coordenador_id',getUserId()).order('disciplina');
+      const {data:notas,error:ne}=await sb.from('notas_ceeb').select('id, aluno_id, disciplina, turma, nota_1, nota_2, nota_3, nota_4, aproveitamento, faltas, recuperacao, media_pos_recuperacao, situacao, alunos_ceeb(id,nome,cpf)').eq('diario_id',diarioId).eq('coordenador_id',getUserId()).order('disciplina');
       if(ne) throw ne;
       $('#editorTitle').textContent = `Editar tabela: ${diario.disciplina || diario.nome_arquivo || 'Sem nome'}`;
       $('#editorSubtitle').textContent = `${diario.turma || '-'} • ${diario.professor || '-'} • ${notas?.length || 0} aluno(s)`;
@@ -439,8 +453,22 @@ async function initAdmin(){
     const tbody = $('#editorBody'); if(!tbody) return;
     tbody.innerHTML = notas.length ? notas.map(n=>{
       const a = n.alunos_ceeb || {};
-      return `<tr data-nota="${n.id}" data-aluno="${a.id||''}"><td><input data-k="nome" value="${esc(a.nome||'')}"></td><td><input data-k="cpf" value="${esc(cpfMask(a.cpf||''))}"></td><td>${esc(n.disciplina||'-')}</td><td>${esc(n.turma||'-')}</td><td>${esc(n.situacao||'-')}</td><td><button class="outline" data-save-row="${n.id}">Salvar</button> <button class="outline danger" data-delete-row="${n.id}">Excluir aluno</button></td></tr>`;
-    }).join('') : '<tr><td colspan="6">Nenhum aluno nesta tabela.</td></tr>';
+      return `<tr data-nota="${n.id}" data-aluno="${a.id||''}">
+        <td><input data-k="nome" value="${esc(a.nome||'')}"></td>
+        <td><input data-k="cpf" value="${esc(cpfMask(a.cpf||''))}"></td>
+        <td>${esc(n.disciplina||'-')}</td>
+        <td>${esc(n.turma||'-')}</td>
+        <td><input class="notaInput" data-k="nota_1" value="${esc(formatarNotaBR(n.nota_1))}" inputmode="decimal"></td>
+        <td><input class="notaInput" data-k="nota_2" value="${esc(formatarNotaBR(n.nota_2))}" inputmode="decimal"></td>
+        <td><input class="notaInput" data-k="nota_3" value="${esc(formatarNotaBR(n.nota_3))}" inputmode="decimal"></td>
+        <td><input class="notaInput" data-k="nota_4" value="${esc(formatarNotaBR(n.nota_4))}" inputmode="decimal"></td>
+        <td><input class="notaInput" data-k="aproveitamento" value="${esc(formatarNotaBR(n.aproveitamento))}" inputmode="decimal"></td>
+        <td><input class="faltasInput" data-k="faltas" value="${esc(n.faltas??0)}" inputmode="numeric"></td>
+        <td><input class="notaInput" data-k="recuperacao" value="${esc(formatarNotaBR(n.recuperacao))}" inputmode="decimal"></td>
+        <td><input data-k="situacao" value="${esc(n.situacao||'')}"></td>
+        <td><button class="outline" data-save-row="${n.id}">Salvar</button> <button class="outline danger" data-delete-row="${n.id}">Excluir aluno</button></td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="13">Nenhum aluno nesta tabela.</td></tr>';
   }
 
   $('#editorBody')?.addEventListener('click', async e=>{
@@ -459,10 +487,26 @@ async function initAdmin(){
       const nome = tr.querySelector('[data-k="nome"]')?.value?.trim();
       const cpf = cleanCPF(tr.querySelector('[data-k="cpf"]')?.value || '');
       if(!nome || cpf.length < 11) throw new Error('Informe nome completo e CPF válido.');
-      setStatus($('#editorStatus'),'Salvando alteração do aluno...');
-      const {error}=await sb.from('alunos_ceeb').update({nome,nome_normalizado:norm(nome),cpf}).eq('id',alunoId).eq('coordenador_id',getUserId());
-      if(error) throw error;
-      setStatus($('#editorStatus'),'Aluno atualizado com sucesso.');
+
+      const notaPayload = {
+        nota_1: toNum(tr.querySelector('[data-k="nota_1"]')?.value),
+        nota_2: toNum(tr.querySelector('[data-k="nota_2"]')?.value),
+        nota_3: toNum(tr.querySelector('[data-k="nota_3"]')?.value),
+        nota_4: toNum(tr.querySelector('[data-k="nota_4"]')?.value),
+        aproveitamento: toNum(tr.querySelector('[data-k="aproveitamento"]')?.value),
+        faltas: Number.parseInt(String(tr.querySelector('[data-k="faltas"]')?.value || '0').replace(/\D/g,''),10) || 0,
+        recuperacao: toNum(tr.querySelector('[data-k="recuperacao"]')?.value),
+        situacao: tr.querySelector('[data-k="situacao"]')?.value?.trim() || null
+      };
+
+      setStatus($('#editorStatus'),'Salvando alterações do aluno e das notas...');
+      const {error:alunoError}=await sb.from('alunos_ceeb').update({nome,nome_normalizado:norm(nome),cpf}).eq('id',alunoId).eq('coordenador_id',getUserId());
+      if(alunoError) throw alunoError;
+
+      const {error:notaError}=await sb.from('notas_ceeb').update(notaPayload).eq('id',notaId).eq('coordenador_id',getUserId());
+      if(notaError) throw notaError;
+
+      setStatus($('#editorStatus'),'Aluno e notas atualizados com sucesso.');
       if(currentDiarioId) await openTable(currentDiarioId);
     }catch(err){ setStatus($('#editorStatus'), err.message || String(err), true); }
   }
@@ -508,5 +552,10 @@ async function initAluno(){
 }
 function renderBoletim(aluno, notas){
   const r=$('#resultado'); r.classList.remove('hidden');
-  r.innerHTML=`<div class="card"><div class="boletimTop"><div><h2>Boletim Digital</h2><p><b>Aluno:</b> ${aluno.nome}<br><b>CPF:</b> ${aluno.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4')}</p></div><div><button class="btn noPrint" onclick="window.print()">Imprimir / Salvar PDF</button></div></div></div>${notas.length?notas.map(n=>`<article class="subjectCard"><h3>${n.disciplina||'Disciplina'} <span class="pill">${n.situacao||'Lançada'}</span></h3><p><b>Curso:</b> ${n.curso||'-'} &nbsp; <b>Turma:</b> ${n.turma||'-'}<br><b>Professor:</b> ${n.professor||'-'}<br><b>Horário:</b> ${n.horario||'-'} &nbsp; <b>Carga horária:</b> ${n.carga_horaria||'-'} &nbsp; <b>Período:</b> ${n.periodo||'-'}</p><div class="tableWrap"><table><thead><tr><th>1ª</th><th>2ª</th><th>3ª</th><th>4ª</th><th>Média</th><th>Faltas</th><th>Recuperação</th><th>Média pós rec.</th></tr></thead><tbody><tr><td class="grade">${n.nota_1??'-'}</td><td class="grade">${n.nota_2??'-'}</td><td class="grade">${n.nota_3??'-'}</td><td class="grade">${n.nota_4??'-'}</td><td class="grade">${n.aproveitamento??'-'}</td><td>${n.faltas??0}</td><td>${n.recuperacao??'-'}</td><td>${n.media_pos_recuperacao??'-'}</td></tr></tbody></table></div></article>`).join(''):'<div class="card"><p>Nenhuma nota lançada para este aluno ainda.</p></div>'}`;
+  const cpfFmt = String(aluno.cpf||'').replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4');
+  r.innerHTML=`<div class="card"><div class="boletimTop"><div><h2>Boletim Digital</h2><p><b>Aluno:</b> ${aluno.nome}<br><b>CPF:</b> ${cpfFmt}</p></div><div><button class="btn noPrint" onclick="window.print()">Imprimir / Salvar PDF</button></div></div></div>${notas.length?notas.map(n=>{
+    const situacao = n.situacao || 'Lançada';
+    const media = calcularMediaLinha(n);
+    return `<article class="subjectCard"><h3>${n.disciplina||'Disciplina'} <span class="pill ${situacaoClasse(situacao)}">${situacao}</span></h3><p><b>Curso:</b> ${n.curso||'-'} &nbsp; <b>Turma:</b> ${n.turma||'-'}<br><b>Professor:</b> ${n.professor||'-'}<br><b>Horário:</b> ${n.horario||'-'} &nbsp; <b>Carga horária:</b> ${n.carga_horaria||'-'} &nbsp; <b>Período:</b> ${n.periodo||'-'}</p><div class="tableWrap"><table class="boletimTable"><thead><tr><th>Nota 1º</th><th>Nota 2º</th><th>Nota 3º</th><th>Nota 4º</th><th>Média</th><th>Faltas</th><th>Recuperação</th><th>Média pós rec.</th><th>Situação</th></tr></thead><tbody><tr><td class="grade">${formatarNotaBR(n.nota_1)}</td><td class="grade">${formatarNotaBR(n.nota_2)}</td><td class="grade">${formatarNotaBR(n.nota_3)}</td><td class="grade">${formatarNotaBR(n.nota_4)}</td><td class="grade media">${formatarNotaBR(media)}</td><td>${n.faltas??0}</td><td>${formatarNotaBR(n.recuperacao)}</td><td>${formatarNotaBR(n.media_pos_recuperacao)}</td><td><span class="situacao ${situacaoClasse(situacao)}">${situacao}</span></td></tr></tbody></table></div></article>`;
+  }).join(''):'<div class="card"><p>Nenhuma nota lançada para este aluno ainda.</p></div>'}`;
 }
