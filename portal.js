@@ -570,9 +570,9 @@ async function initAdmin(){
     if(!isSupportTI) return setStatus($('#supportUsersStatus'), 'Acesso permitido somente ao Suporte de TI.', true);
     const tbody = $('#supportUsersBody');
     if(!tbody) return;
-    const {data,error}=await sb.from('coordenadores_logins_ceeb').select('*').order('created_at',{ascending:false});
-    if(error){ tbody.innerHTML=`<tr><td colspan="5">Execute primeiro o arquivo SUPABASE_SUPORTE_TI.sql no Supabase. Erro: ${esc(error.message)}</td></tr>`; return; }
-    tbody.innerHTML=(data||[]).length ? data.map(u=>`<tr><td>${new Date(u.created_at).toLocaleString('pt-BR')}</td><td><b>${esc(u.nome||'-')}</b></td><td>${esc(u.email||'-')}</td><td><code>${esc(u.senha_temporaria||'-')}</code></td><td>${esc(u.criado_por||'-')}</td></tr>`).join('') : '<tr><td colspan="5">Nenhum login registrado neste painel ainda.</td></tr>';
+    const {data,error}=await sb.rpc('listar_coordenadores_auth_ceeb');
+    if(error){ tbody.innerHTML=`<tr><td colspan="5">Execute primeiro o arquivo SUPABASE_SUPORTE_TI_V2.sql no Supabase. Erro: ${esc(error.message)}</td></tr>`; return; }
+    tbody.innerHTML=(data||[]).length ? data.map(u=>`<tr><td>${u.created_at ? new Date(u.created_at).toLocaleString('pt-BR') : '-'}</td><td><b>${esc(u.nome||'-')}</b></td><td>${esc(u.email||'-')}</td><td><code>${esc(u.senha_temporaria||'Não disponível')}</code></td><td>${esc(u.criado_por||'Supabase Auth')}</td></tr>`).join('') : '<tr><td colspan="5">Nenhum login encontrado no Supabase Authentication.</td></tr>';
   }
 
   $('#createCoordinatorForm')?.addEventListener('submit', async e=>{
@@ -584,20 +584,11 @@ async function initAdmin(){
     const senha = String(fd.get('senha')||'').trim();
     if(!nome || !email || senha.length < 6) return setStatus($('#supportUsersStatus'), 'Informe nome, e-mail e uma senha com pelo menos 6 caracteres.', true);
     try{
-      setStatus($('#supportUsersStatus'), 'Criando usuário no Supabase Authentication e registrando no painel...');
-      const {error:signError}=await sb.auth.signUp({email, password:senha, options:{data:{nome, perfil:'coordenador'}}});
-      if(signError && !String(signError.message||'').toLowerCase().includes('already')) throw signError;
-      // Se o Supabase trocar a sessão para o novo usuário em projetos sem confirmação por e-mail, tenta voltar para o suporte.
-      const nowSession = (await sb.auth.getSession())?.data?.session;
-      if(nowSession?.user?.email && !isSupportEmail(nowSession.user.email) && suporteSenhaAtual){
-        await sb.auth.signInWithPassword({email: SUPPORT_TI_EMAIL, password: suporteSenhaAtual});
-        const back = await sb.auth.getSession();
-        session = back?.data?.session || session;
-      }
-      const {error:insertError}=await sb.from('coordenadores_logins_ceeb').upsert({nome,email,senha_temporaria:senha,criado_por:session?.user?.email || SUPPORT_TI_EMAIL},{onConflict:'email'});
-      if(insertError) throw insertError;
+      setStatus($('#supportUsersStatus'), 'Criando usuário diretamente no Supabase Authentication...');
+      const {data,error}=await sb.rpc('criar_coordenador_auth_ceeb', {p_nome:nome, p_email:email, p_senha:senha});
+      if(error) throw error;
       e.target.reset();
-      setStatus($('#supportUsersStatus'), 'Login de coordenador criado/registrado com sucesso. Se o Supabase exigir confirmação de e-mail, confirme o usuário no painel Authentication.');
+      setStatus($('#supportUsersStatus'), data?.message || 'Login de coordenador criado no Supabase Authentication com sucesso.');
       await loadSupportUsers();
     }catch(err){
       setStatus($('#supportUsersStatus'), err.message || String(err), true);
