@@ -69,52 +69,60 @@
 .mascoteAluno{
   position:fixed;
   right:18px;
-  bottom:130px;
+  bottom:118px;
   z-index:29;
-  width:clamp(135px, 15vw, 230px);
+  width:clamp(92px, 9vw, 145px);
   pointer-events:none;
-  filter:drop-shadow(0 18px 25px rgba(0,0,0,.22));
+  filter:drop-shadow(0 12px 18px rgba(0,0,0,.20));
   transform-origin:center bottom;
-  animation:mascoteFlutuar 3.8s ease-in-out infinite;
 }
-.mascoteAluno img{
+.mascoteAluno .mascoteBase{
   width:100%;
   height:auto;
   display:block;
-  transform-origin:32% 48%;
-  animation:mascoteAcenar 1.45s ease-in-out infinite;
+}
+.mascoteAluno .mascoteMao{
+  position:absolute;
+  left:-2.5%;
+  top:22%;
+  width:28%;
+  aspect-ratio:175/225;
+  background:url('assets/mascote-mao.png') center/contain no-repeat;
+  transform-origin:78% 82%;
+  animation:mascoteAcenar 2.15s ease-in-out infinite;
+  will-change:transform;
 }
 .mascoteAluno::after{
   content:"";
   position:absolute;
-  left:46%;
-  top:22%;
+  left:43.5%;
+  top:26.5%;
   width:13%;
-  height:7%;
+  height:6.5%;
   border-radius:50%;
-  background:rgba(236,38,25,.92);
+  background:rgba(236,38,25,.96);
   opacity:0;
-  transform:rotate(-7deg) scaleY(.2);
-  animation:mascotePiscar 4s ease-in-out infinite;
-}
-@keyframes mascoteFlutuar{
-  0%,100%{transform:translateY(0) scale(1)}
-  50%{transform:translateY(-10px) scale(1.015)}
+  transform:rotate(-8deg) scaleY(.18);
+  animation:mascotePiscar 5.2s ease-in-out infinite;
 }
 @keyframes mascoteAcenar{
-  0%,100%{transform:rotate(0deg)}
-  25%{transform:rotate(-2.5deg)}
-  55%{transform:rotate(2.5deg)}
-  80%{transform:rotate(-1.2deg)}
+  0%,62%,100%{transform:rotate(0deg)}
+  68%{transform:rotate(-13deg)}
+  74%{transform:rotate(9deg)}
+  80%{transform:rotate(-11deg)}
+  86%{transform:rotate(7deg)}
+  92%{transform:rotate(-4deg)}
 }
 @keyframes mascotePiscar{
-  0%,88%,100%{opacity:0}
-  90%,94%{opacity:1}
+  0%,84%,100%{opacity:0}
+  86%,88%{opacity:1}
+  90%{opacity:0}
+  92%,94%{opacity:1}
 }
 @media(max-width:720px){
   .mascoteAluno{
-    width:116px;
+    width:88px;
     right:8px;
-    bottom:104px;
+    bottom:96px;
   }
 }
