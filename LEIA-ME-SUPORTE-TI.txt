@@ -1,0 +1,16 @@
+LOGIN DO SUPORTE DE TI
+
+E-mail: suporte.ti@ceeb.com
+Senha: SuporteTI@2026
+
+Antes de usar o painel do Suporte de TI, execute no Supabase SQL Editor o arquivo:
+SUPABASE_SUPORTE_TI.sql
+
+O painel do Suporte de TI permite:
+- visualizar todas as tabelas enviadas por coordenadores;
+- abrir/editar notas de qualquer tabela;
+- excluir tabelas;
+- cadastrar novos logins de coordenador;
+- visualizar as senhas temporárias cadastradas pelo próprio painel.
+
+Observação: senhas antigas de usuários já existentes no Supabase Authentication não podem ser recuperadas, pois o Supabase salva senhas criptografadas. O painel exibirá as senhas temporárias cadastradas nele a partir desta atualização.
