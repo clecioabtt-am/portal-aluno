@@ -63,3 +63,58 @@
   width:70px;
   font-weight:800;
 }
+
+
+/* Mascote animado do Portal do Aluno */
+.mascoteAluno{
+  position:fixed;
+  right:18px;
+  bottom:130px;
+  z-index:29;
+  width:clamp(135px, 15vw, 230px);
+  pointer-events:none;
+  filter:drop-shadow(0 18px 25px rgba(0,0,0,.22));
+  transform-origin:center bottom;
+  animation:mascoteFlutuar 3.8s ease-in-out infinite;
+}
+.mascoteAluno img{
+  width:100%;
+  height:auto;
+  display:block;
+  transform-origin:32% 48%;
+  animation:mascoteAcenar 1.45s ease-in-out infinite;
+}
+.mascoteAluno::after{
+  content:"";
+  position:absolute;
+  left:46%;
+  top:22%;
+  width:13%;
+  height:7%;
+  border-radius:50%;
+  background:rgba(236,38,25,.92);
+  opacity:0;
+  transform:rotate(-7deg) scaleY(.2);
+  animation:mascotePiscar 4s ease-in-out infinite;
+}
+@keyframes mascoteFlutuar{
+  0%,100%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-10px) scale(1.015)}
+}
+@keyframes mascoteAcenar{
+  0%,100%{transform:rotate(0deg)}
+  25%{transform:rotate(-2.5deg)}
+  55%{transform:rotate(2.5deg)}
+  80%{transform:rotate(-1.2deg)}
+}
+@keyframes mascotePiscar{
+  0%,88%,100%{opacity:0}
+  90%,94%{opacity:1}
+}
+@media(max-width:720px){
+  .mascoteAluno{
+    width:116px;
+    right:8px;
+    bottom:104px;
+  }
+}

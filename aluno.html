@@ -1,4 +1,10 @@
 <!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CEEB | Portal do Aluno</title><link rel="stylesheet" href="portal.css"></head><body>
 <header class="portalHeader"><a class="portalLogo" href="index.html"><img src="assets/logo-ceeb.png" alt="CEEB"></a><div><h1>Portal do Aluno CEEB</h1><p>Consulte suas notas por disciplina usando nome e CPF.</p></div><div class="headerActions"><a class="outline" href="index.html">Site principal</a><a class="outline" href="admin.html">Área administrativa</a></div></header>
 <main class="wrap"><section class="heroPortal"><div class="card"><h2>Consultar minhas notas</h2><p>Digite o nome e CPF cadastrados pela coordenação para visualizar seu boletim digital.</p><form id="consultaForm" class="loginBox"><label>Nome completo</label><input name="nome" required placeholder="Digite seu nome"><label>CPF</label><input name="cpf" required placeholder="000.000.000-00"><button class="btn" type="submit">Consultar boletim</button><div id="consultaStatus" class="status hidden"></div></form></div><div class="card"><h2>Boletim organizado por disciplina</h2><p>Quando o coordenador enviar os diários das disciplinas, o sistema agrupa automaticamente as notas no seu perfil.</p><ul><li>Curso, turma e professor</li><li>Disciplina e carga horária</li><li>Notas, aproveitamento, faltas e situação</li><li>Opção de imprimir ou salvar PDF</li></ul></div></section><section id="resultado" class="studentResult hidden" style="margin-top:22px"></section></main>
+
+  <!-- Mascote animado do Portal do Aluno -->
+  <div class="mascoteAluno" aria-hidden="true">
+    <img src="assets/mascote-enfermeiro.png" alt="">
+  </div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="portal.js"></script><script>initAluno().catch(e=>alert(e.message));</script></body></html>
