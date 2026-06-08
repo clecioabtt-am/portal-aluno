@@ -100,8 +100,16 @@ formFaturas?.addEventListener('submit', async (event) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nomeCompleto, cpf })
     });
-    const dados = await resposta.json();
-    if (!resposta.ok) throw new Error(dados.error || 'Não foi possível consultar as faturas.');
+
+    const texto = await resposta.text();
+    let dados = {};
+    try {
+      dados = texto ? JSON.parse(texto) : {};
+    } catch {
+      throw new Error('A rota /api/asaas-faturas não retornou JSON. Verifique se as Functions do Cloudflare foram publicadas no deploy.');
+    }
+
+    if (!resposta.ok) throw new Error(dados.error || dados.detalhe || 'Não foi possível consultar as faturas.');
     renderizarFaturas(dados.faturas || []);
   } catch (erro) {
     mostrarMensagem(erro.message || 'Erro ao buscar faturas. Tente novamente.', 'erro');

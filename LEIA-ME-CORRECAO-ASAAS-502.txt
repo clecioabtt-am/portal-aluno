@@ -1,0 +1,38 @@
+CORREÇÃO DO ERRO 502 - FINANCEIRO ASAAS
+
+Foram atualizados estes arquivos:
+
+1) functions/api/asaas-faturas.js
+- Agora usa o padrão correto do Cloudflare Pages Functions: export async function onRequest(context).
+- Lê a chave pelo env.ASAAS_API_KEY.
+- Adiciona tratamento robusto para respostas não JSON do Asaas.
+- Adiciona GET de teste em /api/asaas-faturas.
+- Retorna JSON mesmo quando ocorrer erro, evitando o erro "Unexpected token '<'" no navegador.
+
+2) financeiro.js
+- Agora trata respostas HTML/erro do Cloudflare de forma mais clara.
+
+CONFIGURAÇÃO NO CLOUDFLARE PAGES
+
+Crie/Confira a variável:
+Nome: ASAAS_API_KEY
+Tipo: Secret
+Valor: sua chave real do Asaas
+
+Depois faça NOVO DEPLOY.
+
+TESTE APÓS O DEPLOY
+
+Acesse no navegador:
+https://SEU-DOMINIO/api/asaas-faturas
+
+Se estiver certo, deverá aparecer algo parecido com:
+{"ok":true,"rota":"/api/asaas-faturas","mensagem":"API do financeiro publicada."}
+
+Se continuar 502:
+- Confira se a pasta functions/api/asaas-faturas.js subiu para o GitHub.
+- Confira se o Cloudflare Pages está publicando a raiz correta do projeto.
+- Confira se o novo deploy foi feito depois de adicionar a variável ASAAS_API_KEY.
+
+IMPORTANTE
+Se a chave API foi exibida em prints ou conversas, gere uma nova chave no Asaas e substitua no Cloudflare.
