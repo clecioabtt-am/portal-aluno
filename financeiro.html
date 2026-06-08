@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Financeiro | Minhas Faturas</title>
+  <meta name="description" content="Consulte suas faturas em aberto pelo nome completo e CPF." />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="financeiro.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="logoBox" href="index.html#inicio" aria-label="Centro Educacional Emannuel Butel">
+      <img src="assets/logo-ceeb.png" alt="Centro Educacional Emannuel Butel" />
+    </a>
+    <button class="menuBtn" aria-label="Abrir menu">☰</button>
+    <nav class="nav">
+      <a href="index.html#inicio">Início</a>
+      <a href="index.html#sobre">Sobre nós</a>
+      <a href="index.html#cursos">Cursos</a>
+      <a href="index.html#tecnico">Técnico em Enfermagem</a>
+      <a href="index.html#postecnico">Pós Técnico</a>
+      <a href="index.html#estrutura">Estrutura</a>
+      <a href="index.html#depoimentos">Depoimentos</a>
+      <a href="index.html#contato">Contato</a>
+      <div class="navDropdown activeDrop">
+        <button type="button" class="navDropBtn active">Financeiro ▾</button>
+        <div class="navSubmenu">
+          <a class="active" href="financeiro.html">Minhas Faturas</a>
+        </div>
+      </div>
+      <a href="aluno.html">Portal do Aluno</a>
+    </nav>
+    <a class="topCta" href="aluno.html">🎓 Portal do Aluno</a>
+  </header>
+
+  <main class="financeiroPage">
+    <section class="financeiroHero reveal">
+      <span class="eyebrow">Financeiro</span>
+      <h1>Minhas <strong>Faturas</strong></h1>
+      <p>Informe seu nome completo e CPF para consultar as faturas em aberto cadastradas na plataforma Asaas.</p>
+    </section>
+
+    <section class="consultaFaturas reveal" aria-label="Consulta de faturas">
+      <form id="formFaturas" class="faturaForm">
+        <div class="formGroup">
+          <label for="nomeCompleto">Nome completo</label>
+          <input id="nomeCompleto" name="nomeCompleto" type="text" placeholder="Digite seu nome completo" autocomplete="name" required />
+        </div>
+        <div class="formGroup">
+          <label for="cpf">CPF</label>
+          <input id="cpf" name="cpf" type="text" inputmode="numeric" placeholder="000.000.000-00" maxlength="14" autocomplete="off" required />
+        </div>
+        <button class="buscarFaturasBtn" type="submit">🔎 Buscar faturas</button>
+      </form>
+
+      <div id="mensagemFaturas" class="mensagemFaturas" role="status" aria-live="polite"></div>
+      <div id="listaFaturas" class="listaFaturas"></div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+  <script src="financeiro.js"></script>
+</body>
+</html>

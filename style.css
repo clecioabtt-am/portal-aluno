@@ -83,3 +83,14 @@
     bottom:96px;
   }
 }
+
+/* Menu Financeiro com submenu */
+.navDropdown{position:relative;display:flex;align-items:center;white-space:nowrap}
+.navDropBtn{border:0;background:transparent;color:var(--text);font:inherit;text-transform:uppercase;font-weight:950;cursor:pointer;padding:10px 0;position:relative}
+.navDropBtn:hover,.navDropBtn.active{color:var(--green)}
+.navDropBtn.active:after,.navDropBtn:hover:after{content:"";position:absolute;left:0;right:0;bottom:3px;height:3px;background:var(--green);border-radius:8px}
+.navSubmenu{position:absolute;top:100%;left:0;min-width:190px;background:#fff;border:1px solid rgba(5,117,50,.15);border-radius:14px;box-shadow:0 18px 42px rgba(0,0,0,.13);padding:10px;display:none;z-index:50}
+.navDropdown:hover .navSubmenu,.navDropdown:focus-within .navSubmenu{display:block}
+.navSubmenu a{display:block;padding:12px 14px!important;border-radius:10px;color:var(--text)}
+.navSubmenu a:hover{background:#ecfff5;color:var(--green)}
+@media(max-width:1080px){.navDropdown{width:100%;align-items:flex-start;flex-direction:column}.navDropBtn{width:100%;text-align:left}.navSubmenu{position:static;display:block;box-shadow:none;border:0;background:#f7fff9;margin-top:2px;width:100%}}

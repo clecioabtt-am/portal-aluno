@@ -1,0 +1,27 @@
+AJUSTE REALIZADO - MENU FINANCEIRO / MINHAS FATURAS
+
+1. Foi inserido no menu superior o item FINANCEIRO com o submenu MINHAS FATURAS.
+2. Foi criada a página financeiro.html.
+3. O aluno informa nome completo e CPF e clica em BUSCAR FATURAS.
+4. O site chama a rota segura /api/asaas-faturas.
+5. Essa rota consulta o Asaas pelo CPF, valida o nome do cliente e lista faturas PENDING e OVERDUE.
+6. A chave API do Asaas NÃO deve ficar no arquivo financeiro.js, config.js ou HTML.
+
+ONDE INSERIR A CHAVE API DO ASAAS
+
+No Cloudflare Pages, cadastre uma variável de ambiente:
+
+Nome da variável: ASAAS_API_KEY
+Valor: cole a sua chave API do Asaas
+
+Caminho no Cloudflare:
+Pages > seu projeto > Settings > Environment variables > Add variable
+
+Depois de salvar a variável, faça um novo deploy do projeto.
+
+Opcional:
+Se estiver usando ambiente sandbox do Asaas para testes, crie também:
+ASAAS_API_URL=https://sandbox.asaas.com/api/v3
+
+Para produção, não precisa criar ASAAS_API_URL. O sistema usa automaticamente:
+https://api.asaas.com/v3
