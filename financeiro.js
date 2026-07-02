@@ -38,9 +38,9 @@ function statusBR(status) {
   const mapa = {
     PENDING: 'Aguardando pagamento',
     OVERDUE: 'Vencida',
-    RECEIVED: 'Paga',
-    CONFIRMED: 'Paga',
-    RECEIVED_IN_CASH: 'Paga'
+    RECEIVED: 'Pago',
+    CONFIRMED: 'Pago',
+    RECEIVED_IN_CASH: 'Pago'
   };
   return mapa[status] || status || '-';
 }
@@ -74,6 +74,39 @@ function mostrarMensagem(texto, tipo = 'info') {
   mensagemFaturas.textContent = texto;
 }
 
+function categoriaDaFatura(status) {
+  if (['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'].includes(status)) return 'pagas';
+  if (status === 'OVERDUE') return 'vencidas';
+  return 'aguardando';
+}
+
+function ordenarPorVencimento(faturas) {
+  return [...faturas].sort((a, b) => String(b?.dueDate || '').localeCompare(String(a?.dueDate || '')));
+}
+
+function renderizarCardFatura(fatura) {
+  const link = fatura.invoiceUrl || fatura.bankSlipUrl || fatura.paymentLink || '#';
+  const descricao = escapeHTML(fatura.description || 'Mensalidade / Fatura escolar');
+  const classeStatus = statusClasse(fatura.status);
+  const textoBotao = categoriaDaFatura(fatura.status) === 'pagas' ? 'Ver fatura' : 'Pagar / acessar';
+  const forma = formaPagamentoBR(fatura.billingType || fatura.paymentMethod || fatura.originalBillingType);
+
+  return `
+    <article class="faturaCard">
+      <div class="faturaIcon">💳</div>
+      <div class="faturaInfo">
+        <h3>${descricao}</h3>
+        <div class="faturaMeta">
+          <span><b>Valor:</b> ${moedaBR(fatura.value)}</span>
+          <span><b>Vencimento:</b> ${dataBR(fatura.dueDate)}</span>
+          <span><b>Forma:</b> ${forma}</span>
+          <span class="statusBadge ${classeStatus}"><b>Status:</b> ${statusBR(fatura.status)}</span>
+        </div>
+      </div>
+      <a class="acessarFaturaBtn" href="${link}" target="_blank" rel="noopener">${textoBotao}</a>
+    </article>`;
+}
+
 function renderizarFaturas(faturas) {
   listaFaturas.innerHTML = '';
   if (!faturas.length) {
@@ -81,27 +114,58 @@ function renderizarFaturas(faturas) {
     return;
   }
 
-  mostrarMensagem(`${faturas.length} fatura(s) encontrada(s).`, 'sucesso');
-  listaFaturas.innerHTML = faturas.map((fatura) => {
-    const link = fatura.invoiceUrl || fatura.bankSlipUrl || fatura.paymentLink || '#';
-    const descricao = escapeHTML(fatura.description || 'Mensalidade / Fatura escolar');
-    const classeStatus = statusClasse(fatura.status);
-    const textoBotao = ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'].includes(fatura.status) ? 'Ver fatura' : 'Pagar / acessar';
-    return `
-      <article class="faturaCard">
-        <div class="faturaIcon">💳</div>
-        <div class="faturaInfo">
-          <h3>${descricao}</h3>
-          <div class="faturaMeta">
-            <span><b>Valor:</b> ${moedaBR(fatura.value)}</span>
-            <span><b>Vencimento:</b> ${dataBR(fatura.dueDate)}</span>
-            <span class="statusBadge ${classeStatus}"><b>Status:</b> ${statusBR(fatura.status)}</span>
-            <span><b>Forma:</b> ${formaPagamentoBR(fatura.billingType)}</span>
-          </div>
+  const grupos = {
+    pagas: ordenarPorVencimento(faturas.filter((fatura) => categoriaDaFatura(fatura.status) === 'pagas')),
+    vencidas: ordenarPorVencimento(faturas.filter((fatura) => categoriaDaFatura(fatura.status) === 'vencidas')),
+    aguardando: ordenarPorVencimento(faturas.filter((fatura) => categoriaDaFatura(fatura.status) === 'aguardando'))
+  };
+
+  const total = grupos.pagas.length + grupos.vencidas.length + grupos.aguardando.length;
+  mostrarMensagem(`${total} fatura(s) encontrada(s). Escolha uma categoria abaixo.`, 'sucesso');
+
+  const secoes = [
+    { id: 'pagas', titulo: 'Faturas pagas', vazio: 'Nenhuma fatura paga encontrada.', classe: 'categoriaPagas' },
+    { id: 'vencidas', titulo: 'Faturas vencidas', vazio: 'Nenhuma fatura vencida encontrada.', classe: 'categoriaVencidas' },
+    { id: 'aguardando', titulo: 'Faturas aguardando pagamento', vazio: 'Nenhuma fatura aguardando pagamento encontrada.', classe: 'categoriaAguardando' }
+  ];
+
+  const categoriaInicial = grupos.vencidas.length ? 'vencidas' : (grupos.aguardando.length ? 'aguardando' : 'pagas');
+
+  listaFaturas.innerHTML = `
+    <div class="faturaCategorias" role="tablist" aria-label="Categorias de faturas">
+      ${secoes.map((secao) => `
+        <button type="button" class="categoriaFaturaBtn ${secao.classe} ${secao.id === categoriaInicial ? 'active' : ''}" data-categoria="${secao.id}" role="tab" aria-selected="${secao.id === categoriaInicial}">
+          <span>${secao.titulo}</span>
+          <strong>${grupos[secao.id].length}</strong>
+        </button>
+      `).join('')}
+    </div>
+    ${secoes.map((secao) => `
+      <section class="faturaSecao ${secao.id === categoriaInicial ? 'active' : ''}" data-secao="${secao.id}">
+        <div class="faturaSecaoHeader">
+          <h2>${secao.titulo}</h2>
+          <span>${grupos[secao.id].length} fatura(s)</span>
         </div>
-        <a class="acessarFaturaBtn" href="${link}" target="_blank" rel="noopener">${textoBotao}</a>
-      </article>`;
-  }).join('');
+        <div class="faturaSecaoLista">
+          ${grupos[secao.id].length ? grupos[secao.id].map(renderizarCardFatura).join('') : `<p class="faturaVazia">${secao.vazio}</p>`}
+        </div>
+      </section>
+    `).join('')}
+  `;
+
+  listaFaturas.querySelectorAll('.categoriaFaturaBtn').forEach((botao) => {
+    botao.addEventListener('click', () => {
+      const categoria = botao.dataset.categoria;
+      listaFaturas.querySelectorAll('.categoriaFaturaBtn').forEach((item) => {
+        const ativo = item.dataset.categoria === categoria;
+        item.classList.toggle('active', ativo);
+        item.setAttribute('aria-selected', String(ativo));
+      });
+      listaFaturas.querySelectorAll('.faturaSecao').forEach((secao) => {
+        secao.classList.toggle('active', secao.dataset.secao === categoria);
+      });
+    });
+  });
 }
 
 cpfInput?.addEventListener('input', (event) => {

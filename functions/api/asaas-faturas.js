@@ -98,7 +98,9 @@ async function buscarFaturasFinanceiras(env, customerId) {
       value: fatura.value,
       dueDate: fatura.dueDate,
       status: fatura.status,
-      billingType: fatura.billingType || fatura.paymentMethod || '',
+      billingType: (fatura.billingType && fatura.billingType !== 'UNDEFINED') ? fatura.billingType : (fatura.paymentMethod || fatura.originalBillingType || fatura.billingType || ''),
+      paymentMethod: fatura.paymentMethod || '',
+      originalBillingType: fatura.originalBillingType || '',
       invoiceUrl: fatura.invoiceUrl || '',
       bankSlipUrl: fatura.bankSlipUrl || '',
       paymentLink: fatura.invoiceUrl || fatura.bankSlipUrl || ''
