@@ -25,16 +25,48 @@ function dataBR(dataISO) {
   return `${dia}/${mes}/${ano}`;
 }
 
+function escapeHTML(valor) {
+  return String(valor || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 function statusBR(status) {
   const mapa = {
     PENDING: 'Aguardando pagamento',
     OVERDUE: 'Vencida',
-    RECEIVED: 'Recebida',
-    CONFIRMED: 'Confirmada',
-    REFUNDED: 'Estornada',
-    CANCELLED: 'Cancelada'
+    RECEIVED: 'Paga',
+    CONFIRMED: 'Paga',
+    RECEIVED_IN_CASH: 'Paga'
   };
   return mapa[status] || status || '-';
+}
+
+function statusClasse(status) {
+  const mapa = {
+    PENDING: 'statusPendente',
+    OVERDUE: 'statusVencida',
+    RECEIVED: 'statusPaga',
+    CONFIRMED: 'statusPaga',
+    RECEIVED_IN_CASH: 'statusPaga'
+  };
+  return mapa[status] || 'statusNeutro';
+}
+
+function formaPagamentoBR(tipo) {
+  const valor = String(tipo || '').trim().toUpperCase();
+  const mapa = {
+    BOLETO: 'Boleto',
+    PIX: 'Pix',
+    CREDIT_CARD: 'Cartão de crédito',
+    DEBIT_CARD: 'Cartão de débito',
+    UNDEFINED: 'Não informada',
+    '': 'Não informada'
+  };
+  return mapa[valor] || valor.replace(/_/g, ' ').toLowerCase().replace(/(^|\s)\S/g, letra => letra.toUpperCase());
 }
 
 function mostrarMensagem(texto, tipo = 'info') {
@@ -45,14 +77,16 @@ function mostrarMensagem(texto, tipo = 'info') {
 function renderizarFaturas(faturas) {
   listaFaturas.innerHTML = '';
   if (!faturas.length) {
-    mostrarMensagem('Nenhuma fatura aguardando pagamento foi encontrada para esse aluno.', 'aviso');
+    mostrarMensagem('Nenhuma fatura vencida, aguardando pagamento ou paga foi encontrada para esse aluno.', 'aviso');
     return;
   }
 
   mostrarMensagem(`${faturas.length} fatura(s) encontrada(s).`, 'sucesso');
   listaFaturas.innerHTML = faturas.map((fatura) => {
     const link = fatura.invoiceUrl || fatura.bankSlipUrl || fatura.paymentLink || '#';
-    const descricao = fatura.description || 'Mensalidade / Fatura escolar';
+    const descricao = escapeHTML(fatura.description || 'Mensalidade / Fatura escolar');
+    const classeStatus = statusClasse(fatura.status);
+    const textoBotao = ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'].includes(fatura.status) ? 'Ver fatura' : 'Pagar / acessar';
     return `
       <article class="faturaCard">
         <div class="faturaIcon">💳</div>
@@ -61,11 +95,11 @@ function renderizarFaturas(faturas) {
           <div class="faturaMeta">
             <span><b>Valor:</b> ${moedaBR(fatura.value)}</span>
             <span><b>Vencimento:</b> ${dataBR(fatura.dueDate)}</span>
-            <span><b>Status:</b> ${statusBR(fatura.status)}</span>
-            <span><b>Forma:</b> ${fatura.billingType || '-'}</span>
+            <span class="statusBadge ${classeStatus}"><b>Status:</b> ${statusBR(fatura.status)}</span>
+            <span><b>Forma:</b> ${formaPagamentoBR(fatura.billingType)}</span>
           </div>
         </div>
-        <a class="acessarFaturaBtn" href="${link}" target="_blank" rel="noopener">Acessar o link</a>
+        <a class="acessarFaturaBtn" href="${link}" target="_blank" rel="noopener">${textoBotao}</a>
       </article>`;
   }).join('');
 }

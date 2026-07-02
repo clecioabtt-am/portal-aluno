@@ -82,15 +82,15 @@ async function buscarClientePorCpfENome(env, cpf, nomeCompleto) {
   return nomeConfere ? cliente : null;
 }
 
-async function buscarFaturasAbertas(env, customerId) {
-  const statuses = ['PENDING', 'OVERDUE'];
+async function buscarFaturasFinanceiras(env, customerId) {
+  const statuses = ['PENDING', 'OVERDUE', 'RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'];
   const respostas = await Promise.all(
     statuses.map((status) => chamarAsaas(env, `/payments?customer=${encodeURIComponent(customerId)}&status=${status}&limit=100`))
   );
 
   const faturas = respostas
     .flatMap((resposta) => Array.isArray(resposta?.data) ? resposta.data : [])
-    .filter((fatura) => ['PENDING', 'OVERDUE'].includes(fatura?.status))
+    .filter((fatura) => statuses.includes(fatura?.status))
     .sort((a, b) => String(a?.dueDate || '').localeCompare(String(b?.dueDate || '')))
     .map((fatura) => ({
       id: fatura.id,
@@ -98,7 +98,7 @@ async function buscarFaturasAbertas(env, customerId) {
       value: fatura.value,
       dueDate: fatura.dueDate,
       status: fatura.status,
-      billingType: fatura.billingType,
+      billingType: fatura.billingType || fatura.paymentMethod || '',
       invoiceUrl: fatura.invoiceUrl || '',
       bankSlipUrl: fatura.bankSlipUrl || '',
       paymentLink: fatura.invoiceUrl || fatura.bankSlipUrl || ''
@@ -144,7 +144,7 @@ export async function onRequest(context) {
       return json({ clienteEncontrado: false, faturas: [], mensagem: 'Cliente não encontrado no Asaas com esse nome e CPF.' });
     }
 
-    const faturas = await buscarFaturasAbertas(env, cliente.id);
+    const faturas = await buscarFaturasFinanceiras(env, cliente.id);
 
     return json({
       clienteEncontrado: true,
