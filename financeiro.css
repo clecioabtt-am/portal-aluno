@@ -27,3 +27,191 @@
 .faturaSecao{display:none;margin-top:18px}.faturaSecao.active{display:block}.faturaSecaoHeader{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;padding:0 2px}.faturaSecaoHeader h2{margin:0;color:var(--dark);font-size:21px}.faturaSecaoHeader span{font-weight:900;color:#667085;background:#f7f9fb;border-radius:999px;padding:8px 12px}.faturaSecaoLista{display:grid;gap:16px}.faturaVazia{margin:0;background:#f8fafc;border:1px dashed rgba(0,0,0,.15);border-radius:18px;padding:22px;color:#667085;font-weight:800;text-align:center}
 .faturaMeta .statusVencida{background:#fff0f0!important;border-color:rgba(200,0,0,.24)!important;color:#b00020!important}.faturaMeta .statusPendente{background:#fff7e6!important;border-color:rgba(255,145,0,.32)!important;color:#b65c00!important}.faturaMeta .statusPaga{background:#eafff2!important;border-color:rgba(0,145,60,.26)!important;color:#087a35!important}
 @media(max-width:820px){.faturaCategorias{grid-template-columns:1fr}.faturaSecaoHeader{align-items:flex-start;flex-direction:column}}
+
+/* Responsividade refinada para Android / telas pequenas */
+@media (max-width: 680px) {
+  html, body { width: 100%; overflow-x: hidden; }
+
+  .financeiroPage {
+    padding: 16px 10px 28px;
+    background: linear-gradient(180deg, #f4fff8 0%, #ffffff 55%, #f3f9ff 100%);
+  }
+
+  .financeiroHero {
+    margin: 0 auto 14px;
+    padding: 20px 14px;
+    border-radius: 20px;
+    box-shadow: 0 10px 24px rgba(1,42,25,.08);
+  }
+
+  .financeiroHero h1 {
+    font-size: 30px;
+    letter-spacing: -.8px;
+  }
+
+  .financeiroHero p {
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .consultaFaturas {
+    width: 100%;
+    padding: 14px;
+    border-radius: 20px;
+    box-shadow: 0 12px 30px rgba(1,42,25,.08);
+  }
+
+  .faturaForm {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .formGroup label {
+    font-size: 12px;
+  }
+
+  .formGroup input,
+  .buscarFaturasBtn {
+    height: 50px;
+    border-radius: 14px;
+    font-size: 15px;
+  }
+
+  .mensagemFaturas {
+    margin-top: 14px;
+    padding: 13px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .listaFaturas {
+    gap: 14px;
+    margin-top: 16px;
+  }
+
+  .faturaCategorias {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .categoriaFaturaBtn {
+    min-height: 62px;
+    padding: 14px;
+    border-radius: 16px;
+    box-shadow: 0 8px 18px rgba(0,0,0,.05);
+  }
+
+  .categoriaFaturaBtn span {
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  .categoriaFaturaBtn strong {
+    min-width: 32px;
+    height: 32px;
+    font-size: 14px;
+    flex: 0 0 auto;
+  }
+
+  .faturaSecao {
+    margin-top: 16px;
+  }
+
+  .faturaSecaoHeader {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+
+  .faturaSecaoHeader h2 {
+    font-size: 19px;
+    line-height: 1.2;
+  }
+
+  .faturaSecaoHeader span {
+    font-size: 13px;
+    padding: 7px 10px;
+    white-space: nowrap;
+  }
+
+  .faturaSecaoLista {
+    gap: 12px;
+  }
+
+  .faturaCard {
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    gap: 12px;
+    align-items: start;
+    padding: 14px;
+    border-radius: 18px;
+    box-shadow: 0 9px 22px rgba(0,0,0,.06);
+  }
+
+  .faturaCard:hover {
+    transform: none;
+  }
+
+  .faturaIcon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    font-size: 22px;
+  }
+
+  .faturaInfo h3 {
+    font-size: 16px;
+    line-height: 1.25;
+    margin: 0 0 10px;
+    word-break: break-word;
+  }
+
+  .faturaMeta {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .faturaMeta span {
+    width: 100%;
+    border-radius: 12px;
+    padding: 8px 10px;
+    font-size: 13px;
+    line-height: 1.25;
+  }
+
+  .faturaMeta .statusBadge {
+    text-align: center;
+    text-transform: none;
+  }
+
+  .acessarFaturaBtn {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    border-radius: 14px;
+    font-size: 14px;
+    padding: 12px 14px;
+    box-shadow: 0 10px 20px rgba(5,117,50,.22);
+  }
+
+  .faturaVazia {
+    padding: 18px 12px;
+    border-radius: 16px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .financeiroPage { padding-left: 8px; padding-right: 8px; }
+  .consultaFaturas { padding: 12px; }
+  .faturaCard { grid-template-columns: 42px 1fr; padding: 12px; gap: 10px; }
+  .faturaIcon { width: 42px; height: 42px; font-size: 20px; }
+  .faturaInfo h3 { font-size: 15px; }
+  .faturaSecaoHeader { flex-direction: column; align-items: flex-start; }
+  .faturaSecaoHeader span { white-space: normal; }
+}

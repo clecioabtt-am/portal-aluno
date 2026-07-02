@@ -94,3 +94,44 @@
 .navSubmenu a{display:block;padding:12px 14px!important;border-radius:10px;color:var(--text)}
 .navSubmenu a:hover{background:#ecfff5;color:var(--green)}
 @media(max-width:1080px){.navDropdown{width:100%;align-items:flex-start;flex-direction:column}.navDropBtn{width:100%;text-align:left}.navSubmenu{position:static;display:block;box-shadow:none;border:0;background:#f7fff9;margin-top:2px;width:100%}}
+
+/* Ajuste extra do topo para Android */
+@media (max-width: 680px) {
+  .topbar {
+    min-height: 78px;
+    padding: 8px 10px;
+    gap: 10px;
+  }
+  .logoBox {
+    width: 94px;
+    height: 64px;
+    border-radius: 14px;
+    border-width: 2px;
+    padding: 5px;
+  }
+  .menuBtn {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 8px 18px rgba(0,0,0,.08);
+  }
+  .nav {
+    max-height: calc(100vh - 78px);
+    overflow-y: auto;
+    padding: 14px;
+    gap: 4px;
+  }
+  .nav a,
+  .navDropBtn {
+    width: 100%;
+    padding: 12px 10px;
+    border-radius: 12px;
+    font-size: 13px;
+  }
+  .navSubmenu {
+    border-radius: 12px;
+    padding: 6px;
+  }
+}
